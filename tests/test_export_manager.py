@@ -5,10 +5,25 @@ Tests the export lifecycle functions including creating exports,
 querying status, and polling for completion.
 """
 
+import logging
+
 import pytest
 import responses
 
-from src.export_manager import create_asset_software_export, create_vulnerability_export, get_export_status
+from src.export_manager import (
+    ExportInProgressError,
+    create_asset_software_export,
+    create_remediation_export,
+    create_vulnerability_export,
+    get_export_status,
+)
+
+_ENDPOINT = "https://us.api.insight.rapid7.com/export/graphql"
+
+
+def _in_progress_response(export_id: str = "abc123XYZ=="):
+    """A GraphQL 'already in-progress' error body carrying an in-flight export id."""
+    return {"errors": [{"message": f"Export already in-progress exportId: {export_id}"}]}
 
 
 class TestCreateVulnerabilityExport:
@@ -196,17 +211,64 @@ class TestGetExportStatus:
         assert "X-Api-Key" in request.headers
         assert request.headers["X-Api-Key"] == "test-key"
 
-        # Verify the query in the request body
+        # Verify the query in the request body. The export id is now passed as a
+        # GraphQL variable, not interpolated into the query string, so it must
+        # appear under "variables" and NOT inside the query text.
         import json
 
         body = json.loads(request.body)
         assert "query" in body
         assert "export" in body["query"]
-        assert "export-123" in body["query"]
+        assert "$exportId" in body["query"]
+        assert "export-123" not in body["query"]
+        assert body["variables"] == {"exportId": "export-123"}
 
         # Verify the status was returned correctly
         assert status["status"] == "PROCESSING"
         assert status["result"] == []
+
+    @responses.activate
+    def test_get_export_status_does_not_inject_malicious_id(self):
+        """A crafted export_id must not break out of the GraphQL document.
+
+        Regression test for GraphQL query injection: the export id is passed as
+        a variable, so a value containing `"` and `}` (which would previously
+        close the string literal and selection set, letting extra root
+        selections be injected) is transported verbatim in "variables" and never
+        appears in the query text.
+        """
+        malicious_id = 'REALID") { id } leak: __schema { queryType { name } } dummy: export(id:"REALID'
+
+        responses.add(
+            responses.POST,
+            "https://us.api.insight.rapid7.com/export/graphql",
+            json={
+                "data": {
+                    "export": {
+                        "id": malicious_id,
+                        "status": "PROCESSING",
+                        "dataset": "vulnerability",
+                        "timestamp": None,
+                        "result": None,
+                    }
+                }
+            },
+            status=200,
+        )
+
+        config = {"endpoint": "https://us.api.insight.rapid7.com/export/graphql", "api_key": "test-key"}
+
+        get_export_status(config, malicious_id)
+
+        import json
+
+        body = json.loads(responses.calls[0].request.body)
+        # The injected fragments must never reach the query document.
+        assert "__schema" not in body["query"]
+        assert "leak:" not in body["query"]
+        assert malicious_id not in body["query"]
+        # The raw value is carried untouched as a variable instead.
+        assert body["variables"] == {"exportId": malicious_id}
 
     @responses.activate
     def test_get_export_status_with_pending_status(self):
@@ -339,6 +401,61 @@ class TestPollUntilComplete:
     """Tests for the poll_until_complete function."""
 
     @responses.activate
+    @responses.activate
+    def test_poll_logs_export_id_and_elapsed_each_poll(self, caplog):
+        """Each poll logs the export id, status, poll count and elapsed seconds.
+
+        This is the only progress signal during a wait that routinely runs for
+        minutes in the scheduled job. Without the poll count and elapsed time a
+        slow export and a hung one are indistinguishable in the log.
+        """
+        endpoint = "https://us.api.insight.rapid7.com/export/graphql"
+
+        def _body(status, result):
+            return {
+                "data": {
+                    "export": {
+                        "id": "exp-123",
+                        "status": status,
+                        "dataset": "vulnerability",
+                        "timestamp": None,
+                        "result": result,
+                    }
+                }
+            }
+
+        responses.add(responses.POST, endpoint, json=_body("PENDING", None), status=200)
+        responses.add(responses.POST, endpoint, json=_body("PROCESSING", None), status=200)
+        responses.add(
+            responses.POST,
+            endpoint,
+            json=_body("COMPLETE", [{"prefix": "asset_vulnerability", "urls": ["https://example.com/f.parquet"]}]),
+            status=200,
+        )
+
+        config = {"endpoint": endpoint, "api_key": "test-key"}
+
+        from src.export_manager import poll_until_complete
+
+        with caplog.at_level(logging.INFO, logger="rapid7.refresh.export"):
+            urls = poll_until_complete(config, "exp-123", interval=0)
+
+        assert urls == ["https://example.com/f.parquet"]
+        text = caplog.text
+        # The export id must appear so a run can be correlated with Rapid7 support.
+        assert "exp-123" in text
+        # Every intermediate status is reported, not just the terminal one.
+        assert "status=PENDING" in text
+        assert "status=PROCESSING" in text
+        # Poll count and elapsed time are what distinguish slow from stuck.
+        assert "poll=1" in text
+        assert "poll=3" in text
+        assert "elapsed=" in text
+        # The terminal line states how many files are ready.
+        assert "ready after" in text
+        assert "1 file(s)" in text
+
+    @responses.activate
     def test_poll_until_complete_with_immediate_complete(self):
         """Test poll_until_complete when export is already COMPLETE."""
         responses.add(
@@ -373,7 +490,7 @@ class TestPollUntilComplete:
         assert len(responses.calls) == 1
 
     @responses.activate
-    def test_poll_until_complete_with_pending_then_complete(self, capsys):
+    def test_poll_until_complete_with_pending_then_complete(self, caplog):
         """Test poll_until_complete when export transitions from PENDING to COMPLETE."""
         responses.add(
             responses.POST,
@@ -413,16 +530,17 @@ class TestPollUntilComplete:
 
         from src.export_manager import poll_until_complete
 
+        caplog.set_level(logging.INFO, logger="rapid7.refresh.export")
         urls = poll_until_complete(config, "test-export", interval=0.1)
 
         assert len(urls) == 1
         assert urls[0] == "https://example.com/file.parquet"
         assert len(responses.calls) == 2
 
-        # Status updates are printed to stderr
-        captured = capsys.readouterr()
-        assert "Export status: PENDING" in captured.err
-        assert "Export status: COMPLETE" in captured.err
+        # Status updates are LOGGED (not printed) so a scheduled run gets
+        # timestamps, levels, and the export id on every line.
+        assert "status=PENDING" in caplog.text
+        assert "status=COMPLETE" in caplog.text
 
     @responses.activate
     def test_poll_until_complete_with_processing_then_complete(self):
@@ -498,7 +616,7 @@ class TestPollUntilComplete:
             poll_until_complete(config, "failed-export", interval=1)
 
     @responses.activate
-    def test_poll_until_complete_with_multiple_transitions(self, capsys):
+    def test_poll_until_complete_with_multiple_transitions(self, caplog):
         """Test poll_until_complete with multiple status transitions."""
         responses.add(
             responses.POST,
@@ -561,15 +679,15 @@ class TestPollUntilComplete:
 
         from src.export_manager import poll_until_complete
 
+        caplog.set_level(logging.INFO, logger="rapid7.refresh.export")
         urls = poll_until_complete(config, "test-export", interval=0.1)
 
         assert len(urls) == 3
         assert len(responses.calls) == 3
 
-        captured = capsys.readouterr()
-        assert "Export status: PENDING" in captured.err
-        assert "Export status: PROCESSING" in captured.err
-        assert "Export status: COMPLETE" in captured.err
+        assert "status=PENDING" in caplog.text
+        assert "status=PROCESSING" in caplog.text
+        assert "status=COMPLETE" in caplog.text
 
     @responses.activate
     def test_poll_until_complete_respects_interval(self):
@@ -756,3 +874,33 @@ class TestCreateAssetSoftwareExport:
 
         with pytest.raises(ValueError, match="GraphQL errors.*Unauthorized"):
             create_asset_software_export(config)
+
+
+class TestInProgressHandling:
+    """The platform allows one export per type at a time. Snapshot exports may
+    reuse the in-flight export; remediation must not (it is date-range scoped)."""
+
+    @responses.activate
+    def test_remediation_raises_export_in_progress_with_extracted_id(self):
+        responses.add(responses.POST, _ENDPOINT, json=_in_progress_response("XyZ789plusEQ=="), status=200)
+        config = {"endpoint": _ENDPOINT, "api_key": "k"}
+
+        with pytest.raises(ExportInProgressError) as excinfo:
+            create_remediation_export(config, "2026-01-01", "2026-01-15")
+
+        assert excinfo.value.export_id == "XyZ789plusEQ=="
+
+    @responses.activate
+    def test_vulnerability_snapshot_returns_in_flight_id_unchanged(self):
+        """Regression guard on the deliberate asymmetry: snapshots reuse the id."""
+        responses.add(responses.POST, _ENDPOINT, json=_in_progress_response("snapABC123=="), status=200)
+        config = {"endpoint": _ENDPOINT, "api_key": "k"}
+
+        assert create_vulnerability_export(config) == "snapABC123=="
+
+    @responses.activate
+    def test_asset_software_snapshot_returns_in_flight_id_unchanged(self):
+        responses.add(responses.POST, _ENDPOINT, json=_in_progress_response("assetXYZ456=="), status=200)
+        config = {"endpoint": _ENDPOINT, "api_key": "k"}
+
+        assert create_asset_software_export(config) == "assetXYZ456=="

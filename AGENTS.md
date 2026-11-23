@@ -19,6 +19,12 @@ uv run rapid7-mcp-server
 
 # Or via venv entry point directly (required for Claude Desktop)
 .venv/bin/rapid7-mcp-server
+
+# Headless refresh (scheduled/hosted): create, poll, download and load
+# synchronously in one process, exiting non-zero if any window fails
+uv run rapid7-refresh                              # all types, last 30 days for remediation
+uv run rapid7-refresh --type vulnerability --type policy
+uv run rapid7-refresh --type remediation --start-date 2026-01-01 --end-date 2026-06-30
 ```
 
 ## Commands
@@ -34,8 +40,8 @@ make help        # list all targets
 **Version management**
 ```bash
 make version                  # print current version
-make check-version            # verify manifest.json, pyproject.toml, SKILL.md are in sync
-make bump-version V=0.5.0     # bump all three version files atomically + uv lock
+make check-version            # verify manifest.json, pyproject.toml, plugin.json, SKILL.md are in sync
+make bump-version V=0.5.0     # bump all version files (manifest.json, pyproject.toml, plugin.json, SKILL.md) atomically + uv lock
 ```
 
 **Packaging and release**
@@ -52,6 +58,10 @@ make clean            # remove build artifacts
 | Module | Responsibility |
 |---|---|
 | `src/mcp_server.py` | FastMCP tool definitions, request routing, startup |
+| `src/orchestrator.py` | Synchronous export → download → load orchestration, shared by the MCP tools and the refresh CLI |
+| `src/cli.py` | `rapid7-refresh` foreground entrypoint — thin wiring over the orchestrator for scheduled/hosted refresh |
+| `src/auth.py` | Builds `JWTVerifier`/`MultiAuth` from environment config for the HTTP transport |
+| `src/artifact_store.py` | Publish/fetch the finished database as a versioned Blob artifact in hosted mode |
 | `src/export_manager.py` | GraphQL mutations to create exports, status polling |
 | `src/duckdb_loader.py` | Load Parquet files into DuckDB, prefix → table routing |
 | `src/export_tracker.py` | Separate DuckDB tracking DB — avoids redundant daily exports |
@@ -101,9 +111,22 @@ Each step is non-blocking. The tracking DB (`rapid7_bulk_export_tracking.db`) re
 - `download_rapid7_export` handles this automatically based on `export_type`
 
 **Remediation exports**
-- API limit: 31 days per request — larger ranges are chunked automatically
-- Today-reuse logic is skipped for remediation (date-range scoped, not a snapshot)
-- All chunks load into a single `vulnerability_remediation` table via append mode
+- The platform allows only ONE export per type in flight at a time. Remediation
+  is date-range scoped, so concurrent windows cannot be created — they must be
+  produced strictly one at a time.
+- API limit: 31 days per request. A larger range is split into ≤31-day windows.
+- `start_rapid7_export(export_type="remediation", start_date, end_date)` hands the
+  whole range to a single background job that, per window, sequentially:
+  create → poll to COMPLETE → download → load (`append=True`). It returns a
+  `job_id` immediately; poll it with `check_rapid7_export_status(export_id=job_id)`.
+- If the platform reports another remediation export already in flight, the job
+  waits and recreates its OWN window rather than adopting the foreign export id
+  (that id may cover a different date range).
+- Today-reuse logic is skipped for remediation (date-range scoped, not a snapshot).
+- All windows append into a single `vulnerability_remediation` table.
+- Partial failure is explicit: if a window fails, the loaded windows are kept and
+  the job message names exactly which windows loaded and which are missing, so the
+  missing range can be re-run.
 
 **best_solution fields**
 - `bestSolutionType`, `bestSolutionSummary`, `bestSolutionFix` appear in the `vulnerabilities` table if the org is enabled
@@ -115,6 +138,32 @@ Each step is non-blocking. The tracking DB (`rapid7_bulk_export_tracking.db`) re
 - `policy` — full snapshot, replaces on load (skips `asset` prefix to avoid duplicate asset data)
 - `remediation` — date-range scoped, appends on load, 31-day max per chunk
 - `asset_software` — full snapshot, replaces on load
+
+**Refresh entrypoint (`rapid7-refresh`)**
+- `src/cli.py:main` is registered as the `rapid7-refresh` console script (see `pyproject.toml`).
+- It runs the orchestrator in the foreground — a single process, no background threads
+  that could die mid-write — and is the mechanism a scheduled/hosted job uses to build a
+  database. The MCP write tools remain thin wrappers that spawn a thread and return a job id.
+- `--type` (repeatable, defaults to all types), `--db-path`, `--start-date`/`--end-date`
+  (remediation range, default last 30 days), `-v` for DEBUG logs. Exits non-zero and names
+  the failed windows if any window fails. In hosted mode it publishes the finished database
+  to Blob as a versioned artifact; in local mode that step is a no-op.
+
+**Write-scope gating (remote/HTTP only)**
+- The four mutating tools — `start_rapid7_export`, `download_rapid7_export`,
+  `load_rapid7_parquet`, `purge_rapid7_data` — are tagged `write` and require the write
+  scope (`MCP_AUTH_WRITE_SCOPE`, default `rapid7.write`) via FastMCP's `restrict_tag`.
+- Read tools are available to any authenticated caller. On the stdio transport FastMCP
+  skips component auth entirely, so the gating is inert there and the unauthenticated
+  stdio behaviour is unchanged.
+
+**Data-age annotation**
+- When Blob artifact storage is configured, successful `query_rapid7` results carry a short
+  data-age note (e.g. "Data last loaded 3 hours ago."), sourced from a load-metadata table
+  inside the data database so it travels with the artifact. Local stdio and Docker output
+  is unchanged.
+- It is fail-soft: any error reading the metadata yields an empty note and never breaks the
+  query.
 
 ## Testing
 
@@ -134,9 +183,9 @@ The actual tool names exposed by the server (use these exactly in tool calls):
 
 | Tool | Purpose |
 |---|---|
-| `start_rapid7_export` | Create an export job — returns an export ID immediately |
-| `check_rapid7_export_status` | Poll status of an export job once (non-blocking) |
-| `download_rapid7_export` | Download a completed export and load into DuckDB |
+| `start_rapid7_export` | Create an export job — returns an export ID (or a job ID for a multi-window remediation range) immediately |
+| `check_rapid7_export_status` | Poll status once (non-blocking): platform export status, local download/load phase, or multi-window job progress — accepts an export ID or a job ID |
+| `download_rapid7_export` | Start downloading a completed export and loading it into DuckDB in the background |
 | `load_rapid7_parquet` | Load existing Parquet files from `$DATA_DIR/imports/` |
 | `query_rapid7` | Execute SQL against loaded tables |
 | `get_rapid7_schema` | Return column names and types for all loaded tables |
@@ -174,10 +223,10 @@ make test       # must pass
 
 ## Pull requests
 
-Before opening a PR, bump the version — CI will fail if `manifest.json`, `pyproject.toml`, and `SKILL.md` are out of sync or unchanged from the last release:
+Before opening a PR, bump the version — CI will fail if `manifest.json`, `pyproject.toml`, `plugin.json`, and `SKILL.md` are out of sync or unchanged from the last release:
 
 ```bash
-make bump-version V=x.y.z   # bumps all three files and runs uv lock atomically
+make bump-version V=x.y.z   # bumps all version files and runs uv lock atomically
 ```
 
 Then run the full pre-commit checklist above, commit the version bump, and open the PR. The version bump commit should be separate from the feature/fix commits so it's easy to revert if needed.

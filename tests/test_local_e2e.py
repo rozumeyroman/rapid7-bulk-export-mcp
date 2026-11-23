@@ -37,7 +37,7 @@ import pytest
 
 from src.config import load_config
 from src.download import download_all_files
-from src.duckdb_loader import VulnerabilityDatabase
+from src.duckdb_loader import KNOWN_TABLES, VulnerabilityDatabase
 from src.export_manager import (
     build_remediation_date_chunks,
     create_policy_export,
@@ -46,6 +46,7 @@ from src.export_manager import (
     get_export_status,
 )
 from src.export_tracker import ExportTracker
+from src.orchestrator import refresh_all, run_snapshot_refresh
 
 # ---------------------------------------------------------------------------
 # Skip guard — never runs in CI
@@ -264,6 +265,154 @@ def test_FullExportRoundTrip_ParallelWithToolCoverage():
             print(f"  → chunk {i + 1}: {chunk_rows:,} rows")
 
         print(f"\n  Total remediation rows across {len(remediation_chunks)} chunks: {total_remediation_rows:,}")
+
+        # ==================================================================
+        # PHASE 3b: Async download tool round-trip (the timeout-crash fix)
+        #
+        # PHASE 3 loads via the low-level helpers. This phase exercises the
+        # actual MCP tool path — download_rapid7_export() spawning a
+        # background thread and returning immediately, then
+        # check_rapid7_export_status() reporting the local load phase from
+        # the tracker through to COMPLETE — against the live-completed vuln
+        # export, in its own isolated database.
+        # ==================================================================
+        print("\n" + "=" * 70)
+        print("PHASE 3b: Async download tool round-trip")
+        print("=" * 70)
+
+        from src import mcp_server
+
+        async_dir = Path(tmpdir) / "async"
+        async_dir.mkdir()
+        orig_data_dir = mcp_server._DATA_DIR
+        orig_db = mcp_server.db
+        mcp_server._DATA_DIR = async_dir
+        mcp_server.db = VulnerabilityDatabase(str(async_dir / "rapid7_bulk_export.db"))
+        try:
+            start = time.monotonic()
+            started = mcp_server.download_rapid7_export(export_id=vuln_id, export_type="vulnerability")
+            elapsed = time.monotonic() - start
+            assert "Started downloading" in started, started
+            assert elapsed < 5, f"download tool blocked for {elapsed:.1f}s instead of returning immediately"
+            print(f"  ✓ download_rapid7_export returned in {elapsed:.2f}s (non-blocking)")
+
+            # Poll the unified status tool until the local load reaches a terminal state.
+            deadline = time.monotonic() + _MAX_WAIT
+            final = ""
+            while time.monotonic() < deadline:
+                final = mcp_server.check_rapid7_export_status(export_id=vuln_id)
+                if "loaded successfully" in final or "Error downloading/loading" in final:
+                    break
+                assert "in progress locally" in final, f"unexpected status: {final}"
+                time.sleep(_POLL_INTERVAL)
+
+            assert "loaded successfully" in final, f"async load did not complete: {final}"
+            print("  ✓ check_rapid7_export_status reported COMPLETE via tracker phase")
+
+            async_rows = mcp_server.db.query("SELECT COUNT(*) AS cnt FROM vulnerabilities")[0]["cnt"]
+            assert async_rows > 0, "async tool path loaded 0 vulnerability rows"
+            print(f"  ✓ async-loaded vulnerabilities: {async_rows:,} rows")
+        finally:
+            mcp_server._DATA_DIR = orig_data_dir
+            mcp_server.db = orig_db
+
+        # ==================================================================
+        # PHASE 3c: Multi-window remediation job (the collapsing-export-ID fix)
+        #
+        # Drive the real start_rapid7_export(remediation) over a >31-day range
+        # so it splits into multiple windows, then poll the single job to
+        # completion. Regression for the bug where multiple windows collapsed
+        # onto one export ID and only one month loaded. Isolated DB.
+        # ==================================================================
+        print("\n" + "=" * 70)
+        print("PHASE 3c: Multi-window remediation job")
+        print("=" * 70)
+
+        rem_dir = Path(tmpdir) / "remediation_job"
+        rem_dir.mkdir()
+        orig_data_dir = mcp_server._DATA_DIR
+        orig_db = mcp_server.db
+        mcp_server._DATA_DIR = rem_dir
+        mcp_server.db = VulnerabilityDatabase(str(rem_dir / "rapid7_bulk_export.db"))
+        try:
+            rem_start = (_dt.date.today() - _dt.timedelta(days=75)).isoformat()
+            rem_end = _dt.date.today().isoformat()
+            expected_windows = len(build_remediation_date_chunks(rem_start, rem_end))
+            assert expected_windows >= 3, f"expected a multi-window range, got {expected_windows}"
+
+            started = mcp_server.start_rapid7_export(export_type="remediation", start_date=rem_start, end_date=rem_end)
+            job_id = next(line.split("Job ID:", 1)[1].strip() for line in started.splitlines() if "Job ID:" in line)
+            print(f"  ✓ started remediation job {job_id} over {expected_windows} windows")
+
+            deadline = time.monotonic() + _MAX_WAIT
+            final = ""
+            while time.monotonic() < deadline:
+                final = mcp_server.check_rapid7_export_status(export_id=job_id)
+                if "loaded for all" in final or "failed partway" in final:
+                    break
+                time.sleep(_POLL_INTERVAL)
+
+            assert "loaded for all" in final, f"remediation job did not complete cleanly: {final}"
+
+            # The job must have created DISTINCT export IDs, one per window.
+            job = ExportTracker(str(rem_dir / "rapid7_bulk_export_tracking.db")).get_job(job_id)
+            eids = [c["export_id"] for c in job["chunks"]]
+            assert len(eids) == len(set(eids)) == expected_windows, f"windows collapsed: {eids}"
+            print(f"  ✓ {expected_windows} distinct window export IDs, no collapse")
+        finally:
+            mcp_server._DATA_DIR = orig_data_dir
+            mcp_server.db = orig_db
+
+        # ==================================================================
+        # PHASE 3d: Orchestrator foreground refresh (the headless job path)
+        #
+        # PHASE 3b exercised the MCP tool path (thread + tracker polling). This
+        # phase drives the orchestrator's SYNCHRONOUS entry points directly —
+        # the exact code a scheduled job runs, with no FastMCP and no threads —
+        # building into a db_path of its own choosing. It closes the coverage
+        # gap this file previously had: none of the orchestration ran under the
+        # live E2E because the file did not import the server.
+        # ==================================================================
+        print("\n" + "=" * 70)
+        print("PHASE 3d: Orchestrator foreground refresh")
+        print("=" * 70)
+
+        orch_dir = Path(tmpdir) / "orchestrator"
+        orch_dir.mkdir()
+        orch_db_path = str(orch_dir / "artifact.db")
+
+        # A single snapshot type through the public synchronous entry point.
+        snap = run_snapshot_refresh("vulnerability", config=config, db_path=orch_db_path, data_dir=orch_dir)
+        assert snap.ok, f"orchestrator snapshot refresh failed: {snap.error}"
+        assert snap.row_count > 0, "orchestrator loaded 0 vulnerability rows"
+        print(f"  ✓ run_snapshot_refresh(vulnerability): {snap.row_count:,} rows into a fresh artifact")
+
+        # The refresh built into the db_path it was handed, not the live DB. The
+        # reported count spans every table the export loaded (a vulnerability
+        # export also fills assets and vulnerability_exceptions), so compare it
+        # with the artifact's total across those tables, not vulnerabilities alone.
+        orch_db = VulnerabilityDatabase(orch_db_path)
+        present = {
+            r["table_name"]
+            for r in orch_db.query("SELECT table_name FROM information_schema.tables")
+            if r["table_name"] in KNOWN_TABLES
+        }
+        orch_rows = sum(orch_db.query(f"SELECT COUNT(*) AS cnt FROM {t}")[0]["cnt"] for t in present)  # nosec B608
+        assert orch_rows == snap.row_count, "artifact row count does not match the reported window"
+        print(f"  ✓ artifact at chosen db_path holds {orch_rows:,} rows across {sorted(present)} (live DB untouched)")
+
+        # refresh_all across snapshot types into one artifact; every window
+        # attempted, cross-type coexistence preserved.
+        all_dir = Path(tmpdir) / "orchestrator_all"
+        all_dir.mkdir()
+        all_db_path = str(all_dir / "artifact.db")
+        result = refresh_all(["vulnerability", "policy"], config=config, db_path=all_db_path, data_dir=all_dir)
+        assert result.ok, f"refresh_all reported failures: {[(w.kind, w.error) for w in result.failed]}"
+        assert {w.kind for w in result.windows} == {"vulnerability", "policy"}
+        all_db = VulnerabilityDatabase(all_db_path)
+        assert all_db.query("SELECT COUNT(*) AS cnt FROM vulnerabilities")[0]["cnt"] > 0
+        assert all_db.query("SELECT COUNT(*) AS cnt FROM policies")[0]["cnt"] > 0
+        print(f"  ✓ refresh_all(vulnerability, policy): {result.total_rows:,} rows, both tables present")
 
         # ==================================================================
         # PHASE 4: Assert cross-export table coexistence (the original bug)

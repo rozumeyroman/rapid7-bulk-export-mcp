@@ -5,6 +5,7 @@ This module manages the export lifecycle for Rapid7 vulnerability exports,
 including creating exports, polling for status, and retrieving download URLs.
 """
 
+import logging
 import re
 import sys
 import time
@@ -12,6 +13,29 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from .graphql_client import send_graphql_request
+
+# Named under the same root as the refresh CLI's logger, so `rapid7.refresh`
+# handler configuration in src/cli.py also formats and emits these lines.
+logger = logging.getLogger("rapid7.refresh.export")
+
+
+class ExportInProgressError(ValueError):
+    """Raised when the platform rejects a create because an export of the same
+    type is already in flight.
+
+    The platform allows only one export per type at a time. For unparameterised
+    snapshot exports (vulnerability, policy, asset_software) the in-flight export
+    is an acceptable substitute, so those paths catch this and return
+    ``export_id``. For remediation the in-flight export is scoped to a date range
+    that may not match what was requested, so the caller must wait and recreate
+    its own chunk rather than adopt a foreign id.
+
+    Subclasses ValueError so existing ``except ValueError`` handlers still catch it.
+    """
+
+    def __init__(self, export_id: str):
+        self.export_id = export_id
+        super().__init__(f"An export of this type is already in progress: {export_id}")
 
 
 def _extract_in_progress_id(error_msg: str) -> Optional[str]:
@@ -35,6 +59,9 @@ def _create_simple_export(config: Dict[str, str], mutation_name: str, response_k
     try:
         response = send_graphql_request(endpoint=config["endpoint"], api_key=config["api_key"], query=mutation)
         return response["data"][response_key]["id"]
+    except ExportInProgressError as e:
+        # Snapshot exports are unparameterised, so reusing the in-flight one is fine.
+        return e.export_id
     except ValueError as e:
         export_id = _extract_in_progress_id(str(e))
         if export_id:
@@ -128,8 +155,11 @@ def create_remediation_export(config: Dict[str, str], start_date: str, end_date:
     export job. The returned ID can be used to poll for status and retrieve
     download URLs when complete.
 
-    If an export is already in progress, returns the existing export ID from
-    the error message.
+    If an export of this type is already in flight, raises
+    ExportInProgressError carrying the in-flight export's ID (the platform
+    allows only one export per type at a time). The caller must wait and
+    recreate its own chunk rather than adopt that ID, since a remediation
+    export is scoped to a specific date range.
 
     Args:
         config: Configuration dictionary containing endpoint and api_key.
@@ -141,7 +171,8 @@ def create_remediation_export(config: Dict[str, str], start_date: str, end_date:
 
     Raises:
         ValueError: If date validation fails or the response contains
-            GraphQL errors (except in-progress)
+            GraphQL errors
+        ExportInProgressError: If an export of this type is already in flight
         requests.HTTPError: If the HTTP response status code is not 200
         requests.RequestException: If the network request fails
     """
@@ -187,7 +218,10 @@ def create_remediation_export(config: Dict[str, str], start_date: str, end_date:
     except ValueError as e:
         export_id = _extract_in_progress_id(str(e))
         if export_id:
-            return export_id
+            # A remediation export is scoped to a date range; the in-flight one
+            # may cover a different window, so we must NOT return it as if it
+            # were this chunk's. Signal the caller to wait and recreate.
+            raise ExportInProgressError(export_id) from e
         raise
 
 
@@ -252,10 +286,14 @@ def get_export_status(config: Dict[str, str], export_id: str) -> Dict[str, Any]:
         ValueError: If the response contains GraphQL errors
         requests.RequestException: If the network request fails
     """
-    query = (
-        """
-    {
-      export(id: "%s") {
+    # Pass export_id as a GraphQL variable rather than interpolating it into the
+    # query string. String interpolation lets a crafted id (containing `"` and
+    # `}`) break out of the string literal and inject extra selections into the
+    # document. The create_* mutations in this module already use $variables;
+    # this applies the same safe pattern to the status query.
+    query = """
+    query GetExportStatus($exportId: String!) {
+      export(id: $exportId) {
         id
         status
         dataset
@@ -267,10 +305,12 @@ def get_export_status(config: Dict[str, str], export_id: str) -> Dict[str, Any]:
       }
     }
     """
-        % export_id
-    )
 
-    response = send_graphql_request(endpoint=config["endpoint"], api_key=config["api_key"], query=query)
+    variables = {"exportId": export_id}
+
+    response = send_graphql_request(
+        endpoint=config["endpoint"], api_key=config["api_key"], query=query, variables=variables
+    )
     export_data = response["data"]["export"]
 
     parquet_urls = []
@@ -291,8 +331,9 @@ def poll_until_complete(config: Dict[str, str], export_id: str, interval: int = 
     """Poll the export status until it completes and return Parquet file URLs.
 
     Continuously polls the export status at regular intervals until the export
-    job reaches a terminal state (COMPLETE or FAILED). Prints status updates to
-    stderr to provide user feedback during the polling process.
+    job reaches a terminal state (COMPLETE or FAILED). Logs one line per poll with
+    the export id and elapsed time, so a scheduled run shows whether a long wait is
+    progressing or stuck.
 
     Args:
         config: Configuration dictionary containing endpoint and api_key.
@@ -307,14 +348,33 @@ def poll_until_complete(config: Dict[str, str], export_id: str, interval: int = 
         requests.HTTPError: If the HTTP response status code is not 200
         requests.RequestException: If the network request fails
     """
+    started = time.monotonic()
+    polls = 0
     while True:
         try:
             status_info = get_export_status(config, export_id)
             current_status = status_info["status"]
+            polls += 1
 
-            print(f"Export status: {current_status}", file=sys.stderr)
+            # Logged rather than printed, and carrying the export id plus elapsed
+            # time, because this is the only signal during a wait that routinely
+            # runs for minutes in a scheduled job. Without the elapsed count a
+            # slow export and a hung one look identical in the log.
+            logger.info(
+                "export %s status=%s poll=%d elapsed=%ds",
+                export_id,
+                current_status,
+                polls,
+                int(time.monotonic() - started),
+            )
 
             if current_status in ["COMPLETE", "SUCCEEDED"]:
+                logger.info(
+                    "export %s ready after %ds: %d file(s)",
+                    export_id,
+                    int(time.monotonic() - started),
+                    len(status_info["parquetFiles"]),
+                )
                 return status_info["parquetFiles"]
 
             if current_status == "FAILED":
