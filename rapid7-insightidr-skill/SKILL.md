@@ -13,7 +13,7 @@ tags: [security, siem, xdr, rapid7, insightidr, investigations, incident-respons
 2. This skill covers **InsightIDR Investigations** — a different Rapid7 product from Bulk Export/InsightVM. It reads/writes live SIEM state, not exported snapshot data.
 3. **Never close or assign an investigation without first previewing it and confirming with the user.** See "Closing Investigations — MANDATORY SAFETY FLOW" and "Assigning Investigations — SAFETY FLOW" below.
 4. The underlying API (`/idr/v2/investigations`) is in **preview mode** — behavior may change without notice. Treat unexpected fields or errors as a signal to re-check the current API response shape, not as a bug to silently work around.
-5. **Alert evidence and raw log events contain real personal data.** `get_alert_evidence`, `query_logs`, and `run_saved_query` can all return a real employee's name, email, IP address, and other personal details. See "Alert Evidence — PRIVACY" and "Log Search" below before using them.
+5. **Alert evidence, raw log events, and user/account records contain real personal data.** `get_alert_evidence`, `query_logs`, `run_saved_query`, and `search_idr_entities`/`get_idr_entity` (for `users`/`accounts`) can all return a real employee's name, email, IP address, and other personal details. See "Alert Evidence — PRIVACY" and "Log Search" below before using them.
 6. **There is no API to list everyone eligible to be assigned an investigation.** `list_investigation_assignees` only shows people assigned before — see "Assigning Investigations" below for how to handle someone not on that list.
 7. **Before assuming an endpoint, parameter, or enum value doesn't exist (or guessing one), check the files in `references/`** in this skill's directory — `investigations-api-v2.md`/`.json` (official spec), `comments-api-v1.md`/`insightidr-api-v1.json`, and `log-search-api.md`. This already caught one real bug in this codebase (a silently-ignored filter param). Guessing instead of checking is how that bug happened.
 8. **Never create or delete a saved query without preview/confirm**, same as closing or assigning an investigation. See "Log Search — Saved Queries" below.
@@ -22,7 +22,8 @@ tags: [security, siem, xdr, rapid7, insightidr, investigations, incident-respons
 
 This skill ONLY works with the Rapid7 MCP server's InsightIDR tools:
 
-- `get_investigations(status?, priorities?, assignee_email?, sources?, tags?, limit?)` — list/search investigations
+- `get_investigations(status?, priorities?, assignee_email?, sources?, tags?, start_time?, end_time?, sort?, limit?)` — list investigations by status/priority/assignee/source/tags. **Defaults to the last 28 days, sorted by priority** — see "Time window and ordering" below
+- `search_investigations(title_contains?, actor_user_name?, actor_asset_hostname?, mitre_technique?, detection_rule_rrn?, status?, priority?, source?, start_time?, end_time?, sort_field?, sort_order?, limit?)` — server-side search by WHAT/WHO an investigation involves; newest first by default
 - `get_investigation_details(investigation_id)` — full record + associated alerts for one investigation
 - `get_alert_evidence(alert_id)` — raw source event behind one alert (user, IP, geolocation, service, result — see privacy note below)
 - `get_investigation_product_alerts(investigation_id)` — alerts from OTHER Rapid7 products (Threat Command, Insight Agent) linked to this investigation; most investigations have none, which is normal
@@ -31,6 +32,8 @@ This skill ONLY works with the Rapid7 MCP server's InsightIDR tools:
 - `list_investigation_comments(investigation_id, limit?)` — list comments on an investigation, newest first
 - `add_investigation_comment(investigation_id, body)` — add a comment (no confirm needed — see "Comments" below for why)
 - `close_investigation(investigation_id, disposition, confirm?)` — close one investigation (two-step confirm)
+- `search_idr_entities(entity_type, name?, domain?, user_name?, asset_name?, disabled?, exact?, limit?)` / `get_idr_entity(entity_type, rrn)` — users, assets, accounts, and local accounts InsightIDR knows about (privacy note applies to users/accounts)
+- `get_idr_health_metrics(resource_types?, include_epm?, problems_only?)` — health of agents, collectors, event sources, network sensors, and other collection components
 - `list_logs()` / `list_logsets()` — logs and named log groupings available for search
 - `query_logs(log_ids, statement, time_range?, from_ms?, to_ms?)` — run a LEQL query against raw log data (see "Log Search" below — privacy note applies)
 - `list_saved_queries()` / `run_saved_query(saved_query_id)` — list/run saved LEQL queries
@@ -42,16 +45,17 @@ If these tools are not available, STOP and tell the user: "The Rapid7 MCP server
 
 `references/investigations-api-v2.md` (condensed) and `references/investigations-api-v2.json` (the full official OpenAPI spec, verbatim), plus `references/comments-api-v1.md`/`references/insightidr-api-v1.json` for Comments, and `references/log-search-api.md` for Log Search, live in this skill's directory. They cover every endpoint, parameter, and enum this server touches — including several not implemented yet:
 
-- `createInvestigation` (POST), `updateInvestigation` (PATCH — can set title/status/priority/disposition/assignee in one call), `setPriority`, `setDisposition` (single-field versions of what `close_investigation` does for status), `_search` (richer filtering than list, including free-text `title` CONTAINS search), `removeAlertFromInvestigation`.
+- `createInvestigation` (POST), `updateInvestigation` (PATCH — can set title/status/priority/disposition/assignee in one call), `setPriority`, `setDisposition` (single-field versions of what `close_investigation` does for status), `removeAlertFromInvestigation`, and the new AISOC-cluster endpoints.
+- v1: attachments, comment get/delete/visibility, Community Threats (custom IOC lists), adding collectors.
 - Log Search: single-log/logset detail lookups, log/logset create/rename/delete, saved query update-in-place — see `log-search-api.md`'s "Not implemented this iteration" section for the reasoning behind each.
 
 **Note on `log-search-api.md`**: unlike the Investigations spec, no official OpenAPI JSON exists for Log Search — see that file for sources. Treat it as solid but not "verbatim spec" the way `investigations-api-v2.json` is.
 
-If a user asks for something that sounds like it needs a new capability (reassigning + reprioritizing in one step, free-text search by title, unlinking a bad alert from an investigation), check the reference first — it may already be a known, documented endpoint just not wired up as a tool yet, which is a very different conversation than "does this API even support that."
+If a user asks for something that sounds like it needs a new capability (reassigning + reprioritizing in one step, unlinking a bad alert from an investigation), check the reference first — it may already be a known, documented endpoint just not wired up as a tool yet, which is a very different conversation than "does this API even support that."
 
 **Keeping the reference current**: `references/.spec-meta.json` tracks when the spec was last checked against Rapid7's published copy and its content hash. `make check-idr-spec` (run from the repo root, not something this skill's chat-facing tools expose) checks weekly and re-downloads `investigations-api-v2.json` automatically if it changed — `make check-idr-spec FORCE=1` bypasses the weekly gate. This is a maintainer/dev-workflow command, not something to run as part of triaging an investigation. If `investigations-api-v2.json` is ever updated by that command, `investigations-api-v2.md` (the condensed table) is NOT auto-regenerated — it needs a manual review to stay accurate.
 
-**Note**: `check-idr-spec` currently only covers the v2 Investigations spec. `insightidr-api-v1.json`/`comments-api-v1.md` were fetched once by hand and are NOT auto-checked for staleness — if Comments behavior seems off, verify against a fresh fetch of `help.rapid7.com/insightidr/en-us/api/v1/insightidr-api-v1.json` rather than assuming the bundled copy is current.
+**Note**: `check-idr-spec` currently only covers the v2 spec. `insightidr-api-v1.json` was last refreshed by hand on 2026-11-24 and is NOT auto-checked for staleness — if Comments behavior seems off, verify against a fresh fetch of `help.rapid7.com/insightidr/en-us/api/v1/insightidr-api-v1.json` rather than assuming the bundled copy is current.
 
 ## Data Source
 
@@ -85,7 +89,19 @@ If a user asks for something that sounds like it needs a new capability (reassig
 2. **Summarize before diving in.** Group by status/priority and tell the user the shape of what's open before pulling full details on any one investigation — don't dump 20 investigations' full JSON unprompted.
 3. **Drill into specifics with `get_investigation_details`.** Use this when the user asks about one particular investigation, or when triaging a small shortlist (e.g. all CRITICAL + OPEN). It returns the full investigation record plus associated alerts — the alerts are metadata only (detection rule, alert type, timestamps), not the underlying event.
 4. **Go one level deeper with `get_alert_evidence` when the user needs event-level detail** — source/destination IP, user or account, geolocation, service, and whether the action succeeded. `get_investigation_details` alone does not include this; you must call `get_alert_evidence` per alert ID. See the privacy note below before doing so.
-5. **Interpret `null` fields as API gaps, not analysis failures.** Fields like `first_alert_time`/`latest_alert_time`/`assignee` are frequently `null` in the current preview API even for real investigations — don't over-interpret their absence as meaningful, and don't guess values to fill them in.
+5. **Resolve names to context with `search_idr_entities`** when an investigation or alert mentions a user, account, or host and the question is "who/what is this?" — e.g. `entity_type="accounts", user_name="Jane"` lists that person's accounts and whether each is disabled (`authentication_service` is an exact match: `ACTIVE_DIRECTORY`, `AZURE_AD`, `O365`, `DUO`, …); `entity_type="local_accounts", asset_name="WS-042"` lists local accounts on a host. Same privacy handling as alert evidence for users/accounts.
+6. **Check `get_idr_health_metrics(problems_only=True)` before concluding "nothing happened."** An empty log search or a quiet investigation queue can mean a dead collector or event source, not a quiet network. If the user's question depends on a source's data, verify that source is healthy.
+7. **Interpret `null` fields as API gaps, not analysis failures.** Fields like `first_alert_time`/`latest_alert_time`/`assignee` are frequently `null` in the current preview API even for real investigations — don't over-interpret their absence as meaningful, and don't guess values to fill them in.
+
+### Time window and ordering
+
+`get_investigations` returns **only investigations created in the last 28 days** unless `start_time` is set, and sorts by **priority, not recency** unless `sort` is set. So:
+
+- "Newest / latest / most recent" → `sort="created_time,DESC"`.
+- "Last quarter", "since January", "older than a month" → set `start_time` (ISO, e.g. `"2026-01-01T00:00:00Z"`) and optionally `end_time`.
+- Never report "there are no investigations from X" for a period older than 28 days without having set `start_time`.
+
+Use `search_investigations` instead when the filter is about content: title text, an involved user or host, a MITRE technique (`mitre_technique="T1110"`), or a detection rule. Its filters are single exact values for `status`/`priority`/`source`; for several statuses at once, use `get_investigations`.
 
 ## Alert Evidence — PRIVACY
 

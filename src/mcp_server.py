@@ -37,6 +37,21 @@ from .export_manager import (
     poll_until_complete,
 )
 from .export_tracker import ExportTracker
+from .insightidr_context_manager import (
+    ENTITY_TYPES as IDR_ENTITY_TYPES,
+)
+from .insightidr_context_manager import (
+    HEALTH_RESOURCE_TYPES as IDR_HEALTH_RESOURCE_TYPES,
+)
+from .insightidr_context_manager import (
+    get_entity as idr_get_entity,
+)
+from .insightidr_context_manager import (
+    get_health_metrics as idr_get_health_metrics,
+)
+from .insightidr_context_manager import (
+    search_entities as idr_search_entities,
+)
 from .insightidr_log_search_manager import (
     create_saved_query as idr_create_saved_query,
 )
@@ -90,6 +105,9 @@ from .insightidr_manager import (
 )
 from .insightidr_manager import (
     list_known_assignees as idr_list_known_assignees,
+)
+from .insightidr_manager import (
+    search_investigations as idr_search_investigations,
 )
 
 # The remediation retry path lives in the orchestrator now; re-export the
@@ -1218,9 +1236,17 @@ def get_investigations(
     assignee_email: str = "",
     sources: str = "",
     tags: str = "",
+    start_time: str = "",
+    end_time: str = "",
+    sort: str = "",
     limit: int = 20,
 ) -> str:
     """List InsightIDR investigations matching the given filters.
+
+    IMPORTANT: without start_time the API only returns investigations
+    created in the last 28 days, and results are sorted by priority, not
+    recency. For "newest"/"latest" questions pass sort="created_time,DESC";
+    for anything older than 4 weeks pass start_time.
 
     Args:
         status: Comma-separated statuses to include, e.g. "OPEN,INVESTIGATING".
@@ -1229,10 +1255,20 @@ def get_investigations(
         priorities: Comma-separated priorities to include, e.g. "CRITICAL,HIGH".
                     Leave empty to include all priorities.
         assignee_email: Only return investigations assigned to this user.
-        sources: Comma-separated sources to include, e.g. "MANUAL,HUNT,ALERT".
+        sources: Comma-separated sources to include, e.g. "ALERT,USER".
+                 Valid values: "ALERT", "HUNT", "USER", "AUTOMATION".
                  Leave empty to include all sources.
         tags: Comma-separated tags; only investigations with ALL given tags
               are included. Leave empty to not filter by tags.
+        start_time: ISO timestamp, e.g. "2026-01-01T00:00:00Z" — only
+                    investigations created after it. Empty = API default
+                    (28 days ago).
+        end_time: ISO timestamp — only investigations created before it.
+                  Empty = now.
+        sort: "field,ASC|DESC". Sortable fields: created_time, priority,
+              rrn, alerts_most_recent_created_time,
+              alerts_most_recent_detection_created_time.
+              Empty = API default "priority,DESC".
         limit: Maximum number of investigations to return (1-100, default 20).
 
     Returns:
@@ -1248,28 +1284,364 @@ def get_investigations(
             assignee_email=assignee_email or None,
             sources=sources or None,
             tags=tags or None,
+            start_time=start_time or None,
+            end_time=end_time or None,
+            sort=sort or None,
             size=limit,
         )
-        investigations = response.get("data", [])
-        metadata = response.get("metadata", {})
-
-        if not investigations:
-            return "No investigations found matching the given filters."
-
-        lines = [f"Found {len(investigations)} investigation(s) (total matching: {metadata.get('total_data', '?')}):\n"]
-        for inv in investigations:
-            assignee = inv.get("assignee") or {}
-            lines.append(
-                f"- [{inv.get('priority', '?')}] {inv.get('title', '(no title)')}\n"
-                f"    id: {inv.get('rrn', inv.get('id', '?'))}\n"
-                f"    status: {inv.get('status', '?')}  disposition: {inv.get('disposition', '-')}\n"
-                f"    assignee: {assignee.get('name', 'Unassigned')} ({assignee.get('email', '-')})\n"
-                f"    created: {inv.get('created_time', '?')}  latest alert: {inv.get('latest_alert_time', '?')}"
-            )
-        return "\n\n".join(lines)
+        return _format_investigation_page(response)
 
     except Exception as e:
         return f"✗ Error listing investigations: {str(e)}"
+
+
+def _format_investigation_page(response: dict) -> str:
+    """Render a {data, metadata} page of investigations as a compact list."""
+    investigations = response.get("data", [])
+    metadata = response.get("metadata", {})
+
+    if not investigations:
+        return "No investigations found matching the given filters."
+
+    lines = [f"Found {len(investigations)} investigation(s) (total matching: {metadata.get('total_data', '?')}):\n"]
+    for inv in investigations:
+        assignee = inv.get("assignee") or {}
+        lines.append(
+            f"- [{inv.get('priority', '?')}] {inv.get('title', '(no title)')}\n"
+            f"    id: {inv.get('rrn', inv.get('id', '?'))}\n"
+            f"    status: {inv.get('status', '?')}  disposition: {inv.get('disposition', '-')}\n"
+            f"    assignee: {assignee.get('name', 'Unassigned')} ({assignee.get('email', '-')})\n"
+            f"    created: {inv.get('created_time', '?')}  latest alert: {inv.get('latest_alert_time', '?')}"
+        )
+    return "\n\n".join(lines)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Search Rapid7 InsightIDR Investigations",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    )
+)
+def search_investigations(
+    title_contains: str = "",
+    actor_user_name: str = "",
+    actor_asset_hostname: str = "",
+    mitre_technique: str = "",
+    detection_rule_rrn: str = "",
+    status: str = "",
+    priority: str = "",
+    source: str = "",
+    start_time: str = "",
+    end_time: str = "",
+    sort_field: str = "created_time",
+    sort_order: str = "DESC",
+    limit: int = 20,
+) -> str:
+    """Search InsightIDR investigations server-side by title, involved user/host, MITRE technique, or rule.
+
+    Use this instead of get_investigations when the question is about WHAT
+    or WHO an investigation involves — e.g. "investigations involving
+    host WS-042", "anything for user jdoe", "T1110 brute-force
+    investigations", "investigations titled 'Suspicious Authentication'".
+    All given filters must match (AND). Newest first by default.
+
+    Args:
+        title_contains: Substring of the investigation title (case-insensitive).
+        actor_user_name: Substring of an involved user's name.
+        actor_asset_hostname: Substring of an involved asset's hostname.
+        mitre_technique: Exact MITRE ATT&CK technique code, e.g. "T1110".
+        detection_rule_rrn: Exact RRN of the detection rule that fired.
+        status: One status (exact): OPEN, INVESTIGATING, WAITING, or CLOSED.
+        priority: One priority (exact): UNSPECIFIED, LOW, MEDIUM, HIGH, CRITICAL.
+        source: One source (exact): ALERT, HUNT, USER, or AUTOMATION.
+        start_time: ISO timestamp lower bound on created_time.
+        end_time: ISO timestamp upper bound on created_time.
+        sort_field: created_time (default), priority, rrn,
+                    alerts_most_recent_created_time, or
+                    alerts_most_recent_detection_created_time.
+        sort_order: "DESC" (default) or "ASC".
+        limit: Maximum number of investigations to return (1-100, default 20).
+
+    Returns:
+        A formatted list of matching investigations (same shape as
+        get_investigations).
+    """
+    try:
+        config = load_config()
+        criteria = {
+            "title": title_contains,
+            "actor_user_name": actor_user_name,
+            "actor_asset_hostname": actor_asset_hostname,
+            "alert_mitre_t_codes": mitre_technique.strip().upper(),
+            "alert_rule_rrn": detection_rule_rrn,
+            "status": status.strip().upper(),
+            "priority": priority.strip().upper(),
+            "source": source.strip().upper(),
+        }
+        response = idr_search_investigations(
+            config,
+            criteria,
+            start_time=start_time or None,
+            end_time=end_time or None,
+            sort_field=sort_field or None,
+            sort_order=sort_order,
+            size=limit,
+        )
+        return _format_investigation_page(response)
+
+    except Exception as e:
+        return f"✗ Error searching investigations: {str(e)}"
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Search Rapid7 InsightIDR Users, Assets, and Accounts",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    )
+)
+def search_idr_entities(
+    entity_type: str,
+    name: str = "",
+    domain: str = "",
+    authentication_service: str = "",
+    user_name: str = "",
+    asset_name: str = "",
+    disabled: str = "",
+    exact: bool = False,
+    limit: int = 20,
+) -> str:
+    """Look up the users, assets, and accounts InsightIDR knows about — triage context without LEQL.
+
+    Use it to answer "who is this user?", "which accounts does this person
+    have?", "is this account disabled?", "what local accounts exist on this
+    host?", or to resolve a name seen in an investigation/alert to an RRN.
+
+    PRIVACY NOTE: users and accounts are real people in the organization
+    (names, domains, account status). Treat results as sensitive
+    organizational data.
+
+    Args:
+        entity_type: "users", "assets", "accounts", or "local_accounts".
+        name: Name to match (user display name, asset hostname, account or
+              local-account name). Partial match unless exact=True.
+        domain: Domain (users, accounts).
+        authentication_service: Exact service an account belongs to
+                                (accounts only), e.g. ACTIVE_DIRECTORY,
+                                AZURE_AD, O365, DUO.
+        user_name: Owning user's name (accounts, local_accounts).
+        asset_name: Owning asset's name (local_accounts only).
+        disabled: "true" / "false" to filter accounts by disabled state
+                  (accounts only). Empty = no filter.
+        exact: Match string fields exactly instead of by substring.
+        limit: Maximum number of results (1-100, default 20).
+
+    Returns:
+        A formatted list of matching entities with their RRN and key fields.
+        Use get_idr_entity with an RRN for the full record.
+    """
+    try:
+        if entity_type not in IDR_ENTITY_TYPES:
+            return f"✗ Unknown entity_type: {entity_type}. Valid values: {', '.join(IDR_ENTITY_TYPES)}"
+
+        criteria: dict = {}
+        if name:
+            criteria["name"] = name
+        if domain:
+            criteria["domain"] = domain
+        if authentication_service:
+            criteria["authentication_service"] = authentication_service.strip().upper()
+        if user_name:
+            criteria["user.name"] = user_name
+        if asset_name:
+            criteria["asset.name"] = asset_name
+        if disabled:
+            flag = disabled.strip().lower()
+            if flag not in ("true", "false"):
+                return f"✗ disabled must be 'true' or 'false', got: {disabled}"
+            criteria["disabled"] = flag == "true"
+
+        config = load_config()
+        response = idr_search_entities(config, entity_type, criteria, exact=exact, size=limit)
+        entities = response.get("data", [])
+        metadata = response.get("metadata", {})
+
+        if not entities:
+            return f"No {entity_type} found matching the given criteria."
+
+        lines = [f"Found {len(entities)} {entity_type} (total matching: {metadata.get('total_data', '?')}):"]
+        for ent in entities:
+            lines.append(f"\n- {ent.get('name', '(no name)')}\n    rrn: {ent.get('rrn', '?')}")
+            details = []
+            for key in ("first_name", "last_name", "domain", "authentication_service", "disabled"):
+                if ent.get(key) not in (None, ""):
+                    details.append(f"{key}: {ent[key]}")
+            for ref in ("user", "asset"):
+                linked = ent.get(ref)
+                if isinstance(linked, dict) and linked:
+                    details.append(f"{ref}: {linked.get('name', '?')} ({linked.get('rrn', '?')})")
+            if details:
+                lines.append("    " + "  ".join(details))
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"✗ Error searching {entity_type}: {str(e)}"
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Rapid7 InsightIDR User, Asset, or Account",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    )
+)
+def get_idr_entity(entity_type: str, rrn: str) -> str:
+    """Get the full record for one InsightIDR user, asset, account, or local account by RRN.
+
+    PRIVACY NOTE: user and account records describe real people — treat
+    them as sensitive organizational data.
+
+    Args:
+        entity_type: "users", "assets", "accounts", or "local_accounts".
+        rrn: The entity RRN, e.g. from search_idr_entities.
+
+    Returns:
+        The complete entity record as JSON.
+    """
+    try:
+        if entity_type not in IDR_ENTITY_TYPES:
+            return f"✗ Unknown entity_type: {entity_type}. Valid values: {', '.join(IDR_ENTITY_TYPES)}"
+        config = load_config()
+        entity = idr_get_entity(config, entity_type, rrn)
+        if not entity:
+            return f"✗ No {entity_type} record found for RRN: {rrn}"
+        return json.dumps(entity, indent=2, ensure_ascii=False, default=str)
+
+    except Exception as e:
+        return f"✗ Error getting {entity_type} record: {str(e)}"
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Rapid7 InsightIDR Health Metrics",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    )
+)
+def get_idr_health_metrics(resource_types: str = "", include_epm: bool = False, problems_only: bool = False) -> str:
+    """Check the health of InsightIDR data collection: agents, collectors, event sources, network sensors, and more.
+
+    Use this for "are my collectors/agents OK?", "which event sources
+    stopped sending?", or before trusting an empty log search (a dead event
+    source looks exactly like "no events").
+
+    Args:
+        resource_types: Comma-separated subset of: agent, collectors,
+                        data_exporters, event_sources, honeypots,
+                        network_sensors, orchestrator, scan_engines.
+                        Empty = all types.
+        include_epm: Include events-per-minute for event sources. Slower.
+        problems_only: Show only components that report an issue, are not
+                       in a RUNNING/ACTIVE state, or (for agents) have
+                       offline/stale agents.
+
+    Returns:
+        Components grouped by kind, with state, last activity, and any
+        reported issue. Notes resource types that failed to load or are
+        not licensed.
+    """
+    try:
+        requested = [t.strip() for t in resource_types.split(",") if t.strip()] or list(IDR_HEALTH_RESOURCE_TYPES)
+        unknown = [t for t in requested if t not in IDR_HEALTH_RESOURCE_TYPES]
+        if unknown:
+            return (
+                f"✗ Unknown resource type(s): {', '.join(unknown)}. Valid types: {', '.join(IDR_HEALTH_RESOURCE_TYPES)}"
+            )
+
+        config = load_config()
+        # One request per type: the response records carry no type field, and
+        # their RRN formats vary by product (e.g. an event source RRN contains
+        # ":collector:"), so the requested type is the only reliable label.
+        lines = []
+        shown = 0
+        unlicensed, failed, errors = [], [], []
+        for kind in requested:
+            try:
+                response = idr_get_health_metrics(config, resource_types=kind, with_epm=include_epm)
+            except Exception as e:  # one bad type must not hide the others
+                errors.append(f"{kind}: {e}")
+                continue
+            metadata = response.get("metadata", {})
+            unlicensed += metadata.get("unlicensed_resource_types") or []
+            failed += metadata.get("failed_to_load") or []
+            records = response.get("data", [])
+            if problems_only:
+                records = [rec for rec in records if _health_record_has_problem(rec)]
+            if not records:
+                continue
+            shown += len(records)
+            lines.append(f"\n{kind} ({len(records)}):")
+            lines.extend(_format_health_record(kind, rec) for rec in records)
+            total_pages = metadata.get("total_pages") or 1
+            if total_pages > 1:
+                lines.append(f"  (page 1 of {total_pages} — more {kind} not shown)")
+
+        if not shown:
+            if problems_only:
+                lines.insert(0, "No unhealthy components found.")
+            else:
+                lines.insert(0, "No health metrics returned for this organization.")
+        if failed:
+            lines.append(f"\n⚠ Failed to load (partial result): {', '.join(map(str, failed))}")
+        if errors:
+            lines.append("\n⚠ Errors: " + "; ".join(errors))
+        if unlicensed:
+            lines.append(f"\nNot licensed for this org: {', '.join(map(str, unlicensed))}")
+        return "\n".join(lines).strip()
+
+    except Exception as e:
+        return f"✗ Error getting health metrics: {str(e)}"
+
+
+_HEALTHY_STATES = ("RUNNING", "ACTIVE", "OK")
+
+
+def _health_record_has_problem(rec: dict) -> bool:
+    """True if a health record reports an issue, a non-healthy state, or offline/stale agents."""
+    if rec.get("issue"):
+        return True
+    state = rec.get("state")
+    if state and str(state).upper() not in _HEALTHY_STATES:
+        return True
+    return bool(rec.get("offline") or rec.get("stale"))
+
+
+def _format_health_record(kind: str, rec: dict) -> str:
+    """One indented entry for get_idr_health_metrics."""
+    if kind == "agent":
+        return (
+            f"  - agents: total {rec.get('total', '?')}, online {rec.get('online', '?')}, "
+            f"offline {rec.get('offline', '?')}, stale {rec.get('stale', '?')}"
+        )
+    entry = f"  - {rec.get('name') or rec.get('id') or rec.get('rrn', '?')}: state {rec.get('state', '?')}"
+    entry += f", last active {rec.get('last_active') or '?'}"
+    if rec.get("events_per_minute") is not None:
+        entry += f", EPM {rec['events_per_minute']}"
+    if rec.get("health_status"):
+        entry += f", health {', '.join(map(str, rec['health_status']))}"
+    issue = rec.get("issue")
+    if isinstance(issue, dict) and issue:
+        entry += f"\n      issue [{issue.get('severity', '?')}]: {issue.get('message', '?')}"
+    return entry
 
 
 @mcp.tool(

@@ -36,6 +36,7 @@ Full command reference (versioning, packaging, release, Docker) is in `AGENTS.md
 |---|---|
 | `src/insightidr_client.py` | Authenticated REST HTTP client (JSON, analogous to `graphql_client.py` for GraphQL) |
 | `src/insightidr_manager.py` | Investigations v2 + Comments v1 business logic (list/get/close investigations, assignment, comments, cross-product alerts, alert evidence) |
+| `src/insightidr_context_manager.py` | Read-only triage context: entity search/lookup (users, assets, accounts, local accounts — v1) and health metrics (v2) |
 | `src/insightidr_log_search_manager.py` | Log Search API business logic (LEQL queries, saved queries, log/logset listing) |
 | `src/mcp_server.py` | FastMCP tool definitions for both InsightVM and InsightIDR |
 
@@ -53,7 +54,7 @@ Every InsightIDR write operation (`close_investigation`, `assign_investigation`,
 
 `rapid7-insightidr-skill/references/` holds the authoritative API specs consulted when adding InsightIDR tools:
 - `investigations-api-v2.md` / `.json` — official Rapid7 OpenAPI spec (preview API, `Accept-version: investigations-preview` header required)
-- `comments-api-v1.md` / `insightidr-api-v1.json` — Comments API (stable, no version header)
+- `comments-api-v1.md` / `insightidr-api-v1.json` — Comments + Users/Assets/Accounts APIs (stable, no version header; the JSON is refreshed by hand, not by `check-idr-spec`)
 - `log-search-api.md` — hand-curated reference (no official OpenAPI spec exists for this API)
 
 The JSON spec copy is kept in sync via `make check-idr-spec` (weekly gate, `FORCE=1` to bypass). The `.md` reference is hand-curated and not auto-regenerated. **Run `make check-idr-spec FORCE=1` before changing `src/insightidr_manager.py` or `src/insightidr_client.py`.**

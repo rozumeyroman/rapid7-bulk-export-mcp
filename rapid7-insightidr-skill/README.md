@@ -80,7 +80,8 @@ As of this version, the skill covers three MCP tools:
 
 | Tool | Purpose |
 |---|---|
-| `get_investigations(status?, priorities?, assignee_email?, limit?)` | List/search investigations |
+| `get_investigations(status?, priorities?, assignee_email?, sources?, tags?, start_time?, end_time?, sort?, limit?)` | List investigations. Defaults to the last 28 days, sorted by priority — set `start_time` / `sort` to change that |
+| `search_investigations(title_contains?, actor_user_name?, actor_asset_hostname?, mitre_technique?, ...)` | Server-side search by title, involved user/host, MITRE technique, or detection rule — newest first |
 | `get_investigation_details(investigation_id)` | Full record + associated alerts for one investigation |
 | `get_alert_evidence(alert_id)` | Raw source event behind one alert — user, IP, geolocation, service, result. Contains real personal data; see the skill's privacy note. |
 | `get_investigation_product_alerts(investigation_id)` | Alerts from OTHER Rapid7 products (Threat Command, Insight Agent) linked to this investigation — most have none |
@@ -89,13 +90,15 @@ As of this version, the skill covers three MCP tools:
 | `list_investigation_comments(investigation_id, limit?)` | List comments on an investigation, newest first |
 | `add_investigation_comment(investigation_id, body)` | Add a comment — no confirm needed, it doesn't change investigation state |
 | `close_investigation(investigation_id, disposition, confirm?)` | Close one investigation — two-step confirm required |
+| `search_idr_entities(entity_type, name?, ...)` / `get_idr_entity(entity_type, rrn)` | Users, assets, accounts, and local accounts InsightIDR knows about. User/account records are personal data. |
+| `get_idr_health_metrics(resource_types?, include_epm?, problems_only?)` | Health of agents, collectors, event sources, network sensors, and other collection components |
 | `list_logs()` / `list_logsets()` | Logs and named log groupings available for search |
 | `query_logs(log_ids, statement, time_range?, from_ms?, to_ms?)` | Run a LEQL query against raw log data. Contains real personal data; see the skill's privacy note. |
 | `list_saved_queries()` / `run_saved_query(saved_query_id)` | List/run saved LEQL queries |
 | `create_saved_query(name, log_ids, statement, ..., confirm?)` | Create a saved query — two-step confirm required |
 | `delete_saved_query(saved_query_id, confirm?)` | Delete a saved query — two-step confirm required |
 
-Not yet covered by this skill: Pre-Computed Queries, Detection Rules management, deleting/updating comment visibility, setting priority/disposition without closing, single log/logset detail lookups, and log/logset/saved-query management beyond create+delete. These will be added here as the corresponding MCP tools are implemented.
+Not yet covered by this skill: Pre-Computed Queries, Detection Rules management, attachments, Community Threats, AISOC clusters, deleting/updating comment visibility, setting priority/disposition without closing, single log/logset detail lookups, and log/logset/saved-query management beyond create+delete. These will be added here as the corresponding MCP tools are implemented.
 
 ### API Reference
 

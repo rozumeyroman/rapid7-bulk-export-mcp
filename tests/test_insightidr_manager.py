@@ -25,6 +25,7 @@ from src.insightidr_manager import (
     list_investigation_product_alerts,
     list_investigations,
     list_known_assignees,
+    search_investigations,
 )
 
 CONFIG = {"api_key": "test-api-key", "idr_base": "https://eu.api.insight.rapid7.com"}
@@ -62,7 +63,7 @@ class TestListInvestigations:
             status="OPEN",
             priorities="CRITICAL,HIGH",
             assignee_email="analyst@example.com",
-            sources="ALERT,MANUAL",
+            sources="ALERT,USER",
             tags="Incident",
             size=50,
             index=2,
@@ -73,7 +74,7 @@ class TestListInvestigations:
         assert "statuses=OPEN" in request_url
         assert "priorities=CRITICAL%2CHIGH" in request_url
         assert "assignee.email=analyst%40example.com" in request_url
-        assert "sources=ALERT%2CMANUAL" in request_url
+        assert "sources=ALERT%2CUSER" in request_url
         assert "tags=Incident" in request_url
         assert "size=50" in request_url
         assert "index=2" in request_url
@@ -95,6 +96,82 @@ class TestListInvestigations:
         assert "tags=" not in request_url
         assert "priorities=" not in request_url
         assert "assignee.email=" not in request_url
+        assert "start_time=" not in request_url
+        assert "end_time=" not in request_url
+        assert "sort=" not in request_url
+
+    @responses.activate
+    def test_time_window_and_sort_are_sent(self):
+        responses.add(
+            responses.GET,
+            f"{CONFIG['idr_base']}/idr/v2/investigations",
+            json={"data": [], "metadata": {}},
+            status=200,
+        )
+
+        list_investigations(
+            CONFIG,
+            start_time="2026-01-01T00:00:00Z",
+            end_time="2026-02-01T00:00:00Z",
+            sort="created_time,desc",
+        )
+
+        request_url = responses.calls[0].request.url
+        assert "start_time=2026-01-01T00%3A00%3A00Z" in request_url
+        assert "end_time=2026-02-01T00%3A00%3A00Z" in request_url
+        # Direction is normalized to upper case.
+        assert "sort=created_time%2CDESC" in request_url
+
+    @pytest.mark.parametrize("bad_sort", ["created_time", "title,DESC", "created_time,UP", "a,b,c"])
+    def test_invalid_sort_raises_without_calling_api(self, bad_sort):
+        with pytest.raises(ValueError, match="Invalid sort"):
+            list_investigations(CONFIG, sort=bad_sort)
+
+
+class TestSearchInvestigations:
+    @responses.activate
+    def test_builds_criteria_with_spec_operators(self):
+        responses.add(
+            responses.POST,
+            f"{CONFIG['idr_base']}/idr/v2/investigations/_search",
+            json={"data": [{"rrn": "rrn:inv:1"}], "metadata": {"total_data": 1}},
+            status=200,
+        )
+
+        result = search_investigations(
+            CONFIG,
+            {"title": "Suspicious", "alert_mitre_t_codes": "T1110", "status": "", "actor_user_name": None},
+            start_time="2026-01-01T00:00:00Z",
+            sort_field="created_time",
+            sort_order="desc",
+            size=50,
+        )
+
+        assert result["data"] == [{"rrn": "rrn:inv:1"}]
+        call = responses.calls[0].request
+        assert call.headers["Accept-version"] == "investigations-preview"
+        assert "size=50" in call.url
+        body = json.loads(call.body)
+        # Empty/None criteria are dropped; operators come from the spec table.
+        assert body["search"] == [
+            {"field": "title", "operator": "CONTAINS", "value": "Suspicious"},
+            {"field": "alert_mitre_t_codes", "operator": "EQUALS", "value": "T1110"},
+        ]
+        assert body["sort"] == [{"field": "created_time", "order": "DESC"}]
+        assert body["start_time"] == "2026-01-01T00:00:00Z"
+        assert "end_time" not in body
+
+    def test_unknown_field_raises_without_calling_api(self):
+        with pytest.raises(ValueError, match="Unknown search field"):
+            search_investigations(CONFIG, {"hostname": "x"})
+
+    def test_unsortable_field_raises(self):
+        with pytest.raises(ValueError, match="Invalid sort field"):
+            search_investigations(CONFIG, {}, sort_field="title")
+
+    def test_bad_sort_order_raises(self):
+        with pytest.raises(ValueError, match="Invalid sort order"):
+            search_investigations(CONFIG, {}, sort_field="priority", sort_order="UP")
 
 
 class TestGetInvestigation:

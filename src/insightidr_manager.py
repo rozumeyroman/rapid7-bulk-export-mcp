@@ -17,6 +17,37 @@ from .insightidr_client import INVESTIGATIONS_ACCEPT_VERSION, send_idr_request
 VALID_STATUSES = ("OPEN", "INVESTIGATING", "WAITING", "CLOSED")
 VALID_DISPOSITIONS = ("BENIGN", "MALICIOUS", "NOT_APPLICABLE")
 VALID_COMMENT_VISIBILITIES = ("INTERNAL", "PUBLIC")
+VALID_PRIORITIES = ("UNSPECIFIED", "LOW", "MEDIUM", "HIGH", "CRITICAL")
+# Per the live API's 400 message (2026-11-24); the spec's InvestigationV2
+# enum ("MANUAL") is stale — "MANUAL" is rejected with 400.
+VALID_SOURCES = ("ALERT", "HUNT", "USER", "AUTOMATION")
+VALID_SORT_DIRECTIONS = ("ASC", "DESC")
+
+# Sortable fields, per the v2 spec — identical for listInvestigations' `sort`
+# query param and searchInvestigations' `sort` body entries.
+SORTABLE_INVESTIGATION_FIELDS = (
+    "created_time",
+    "priority",
+    "rrn",
+    "alerts_most_recent_created_time",
+    "alerts_most_recent_detection_created_time",
+)
+
+# searchInvestigations: searchable field -> the one operator the spec documents
+# for it. Fixed here rather than caller-chosen, because the spec's operator
+# enum (EQUALS/CONTAINS/IN) is not valid for every field.
+SEARCHABLE_INVESTIGATION_FIELDS = {
+    "actor_asset_hostname": "CONTAINS",
+    "actor_user_name": "CONTAINS",
+    "alert_mitre_t_codes": "EQUALS",
+    "alert_rule_rrn": "EQUALS",
+    "assignee_id": "EQUALS",
+    "priority": "EQUALS",
+    "rrn": "EQUALS",
+    "source": "EQUALS",
+    "status": "EQUALS",
+    "title": "CONTAINS",
+}
 
 _INVESTIGATIONS_PATH = "/idr/v2/investigations"
 _COMMENTS_PATH = "/idr/v1/comments"
@@ -29,6 +60,9 @@ def list_investigations(
     assignee_email: Optional[str] = None,
     sources: Optional[str] = None,
     tags: Optional[str] = None,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    sort: Optional[str] = None,
     size: int = 20,
     index: int = 0,
 ) -> Dict[str, Any]:
@@ -40,15 +74,29 @@ def list_investigations(
             the API's "statuses" query param (plural).
         priorities: Comma-separated list of priorities, e.g. "CRITICAL,HIGH".
         assignee_email: Only investigations assigned to this user.
-        sources: Comma-separated sources, e.g. "MANUAL,HUNT,ALERT".
+        sources: Comma-separated sources, e.g. "ALERT,USER". See VALID_SOURCES.
         tags: Comma-separated tags; only investigations with ALL given tags
             are included.
+        start_time: ISO timestamp; only investigations created after it.
+            The API defaults to 28 days ago when omitted — older
+            investigations are invisible unless this is set.
+        end_time: ISO timestamp; only investigations created before it.
+        sort: "field,DIRECTION", e.g. "created_time,DESC". The API default
+            is "priority,DESC". See SORTABLE_INVESTIGATION_FIELDS.
         size: Page size, 1-100.
         index: 0-based page index.
 
     Returns:
         The raw API response: {"data": [...], "metadata": {...}}.
+
+    Raises:
+        ValueError: If sort is not a "field,DIRECTION" pair with a sortable
+            field and ASC/DESC — validated client-side because the API is
+            known to silently ignore query params it doesn't recognize.
     """
+    if sort:
+        sort = _normalize_sort(sort)
+
     params: Dict[str, Any] = {"size": size, "index": index}
     if status:
         params["statuses"] = status
@@ -60,6 +108,12 @@ def list_investigations(
         params["sources"] = sources
     if tags:
         params["tags"] = tags
+    if start_time:
+        params["start_time"] = start_time
+    if end_time:
+        params["end_time"] = end_time
+    if sort:
+        params["sort"] = sort
 
     return send_idr_request(
         "GET",
@@ -67,6 +121,90 @@ def list_investigations(
         _INVESTIGATIONS_PATH,
         config["api_key"],
         params=params,
+        accept_version=INVESTIGATIONS_ACCEPT_VERSION,
+    )
+
+
+def _normalize_sort(sort: str) -> str:
+    """Validate a "field,DIRECTION" sort string and return it with the direction upper-cased."""
+    parts = [p.strip() for p in sort.split(",")]
+    valid = len(parts) == 2 and parts[0] in SORTABLE_INVESTIGATION_FIELDS and parts[1].upper() in VALID_SORT_DIRECTIONS
+    if not valid:
+        raise ValueError(
+            f"Invalid sort: {sort!r}. Expected 'field,ASC|DESC' with field one of: "
+            f"{', '.join(SORTABLE_INVESTIGATION_FIELDS)}"
+        )
+    return f"{parts[0]},{parts[1].upper()}"
+
+
+def search_investigations(
+    config: Dict[str, str],
+    criteria: Dict[str, str],
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    sort_field: Optional[str] = None,
+    sort_order: str = "DESC",
+    size: int = 20,
+    index: int = 0,
+) -> Dict[str, Any]:
+    """Search investigations server-side by field criteria (POST /_search).
+
+    Unlike list_investigations, this can match on investigation title,
+    the actor's user name or asset hostname, MITRE technique codes, and
+    detection rule — all server-side.
+
+    Args:
+        config: Config dict from load_config() (needs api_key, idr_base).
+        criteria: {field: value} for fields in SEARCHABLE_INVESTIGATION_FIELDS.
+            All criteria must match (AND). The operator for each field is
+            fixed by the spec (CONTAINS for title/actor names, else EQUALS).
+            Empty values are dropped.
+        start_time: Optional ISO timestamp; created_time lower bound.
+        end_time: Optional ISO timestamp; created_time upper bound.
+        sort_field: Optional field from SORTABLE_INVESTIGATION_FIELDS.
+        sort_order: "ASC" or "DESC".
+        size: Page size, 1-100.
+        index: 0-based page index.
+
+    Returns:
+        The raw API response: {"data": [...], "metadata": {...}}.
+
+    Raises:
+        ValueError: On an unknown search field, unknown sort field, or
+            invalid sort order — checked before any API call.
+    """
+    search: List[Dict[str, str]] = []
+    for field, value in criteria.items():
+        if value in (None, ""):
+            continue
+        if field not in SEARCHABLE_INVESTIGATION_FIELDS:
+            raise ValueError(
+                f"Unknown search field: {field}. Valid fields: {', '.join(SEARCHABLE_INVESTIGATION_FIELDS)}"
+            )
+        search.append({"field": field, "operator": SEARCHABLE_INVESTIGATION_FIELDS[field], "value": value})
+
+    body: Dict[str, Any] = {"search": search}
+    if sort_field:
+        order = sort_order.upper()
+        if sort_field not in SORTABLE_INVESTIGATION_FIELDS:
+            raise ValueError(
+                f"Invalid sort field: {sort_field}. Valid fields: {', '.join(SORTABLE_INVESTIGATION_FIELDS)}"
+            )
+        if order not in VALID_SORT_DIRECTIONS:
+            raise ValueError(f"Invalid sort order: {sort_order}. Valid values: ASC, DESC")
+        body["sort"] = [{"field": sort_field, "order": order}]
+    if start_time:
+        body["start_time"] = start_time
+    if end_time:
+        body["end_time"] = end_time
+
+    return send_idr_request(
+        "POST",
+        config["idr_base"],
+        f"{_INVESTIGATIONS_PATH}/_search",
+        config["api_key"],
+        params={"size": size, "index": index},
+        json_body=body,
         accept_version=INVESTIGATIONS_ACCEPT_VERSION,
     )
 

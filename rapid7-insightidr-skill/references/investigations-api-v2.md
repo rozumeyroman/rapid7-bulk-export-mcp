@@ -8,8 +8,13 @@ endpoint doesn't exist or guessing a parameter name — check the JSON directly
 for anything not covered here.
 
 Base URL: `https://{region}.api.insight.rapid7.com` (see `src/config.py`'s
-`IDR_BASE_ENDPOINTS`). All operations require header
-`Accept-version: investigations-preview` (preview API).
+`IDR_BASE_ENDPOINTS`). All `/idr/v2/investigations*` operations require header
+`Accept-version: investigations-preview` (preview API). `/idr/v2/health-metrics`
+is sent without it (it is not part of the Investigations preview).
+
+**Last reviewed against the published spec: 2026-11-24.** Changes since the
+previous copy (2026-08-27): added the three AISOC-cluster operations and
+`GET /idr/v2/health-metrics` (`withEpm` param, records no longer carry `type`).
 
 **A caught bug**: `listInvestigations`'s status filter query param is
 **`statuses`** (plural), not `status`. Sending `status=` is silently ignored
@@ -24,9 +29,9 @@ notice.
 
 | Method | Path | operationId | Implemented as | Notes |
 |---|---|---|---|---|
-| GET | `/idr/v2/investigations` | `listInvestigations` | `list_investigations` | Query params below |
+| GET | `/idr/v2/investigations` | `listInvestigations` | `list_investigations` (tool: `get_investigations`) | Query params below — `start_time`/`end_time`/`sort` exposed since 2026-11 |
 | POST | `/idr/v2/investigations` | `createInvestigation` | — not implemented | Body: `CreateInvestigationRequestV2` |
-| POST | `/idr/v2/investigations/_search` | `searchInvestigations` | — not implemented | Richer filtering than `listInvestigations` — see Search fields below |
+| POST | `/idr/v2/investigations/_search` | `searchInvestigations` | `search_investigations` | Richer filtering than `listInvestigations` — see Search fields below |
 | POST | `/idr/v2/investigations/bulk_close` | `bulkCloseInvestigations` | — deliberately NOT implemented | Filter-based bulk close — see "Why bulk_close is intentionally unused" below |
 | GET | `/idr/v2/investigations/{id}` | `getInvestigationById` | `get_investigation` | `id` accepts either short id or full rrn |
 | PATCH | `/idr/v2/investigations/{id}` | `updateInvestigation` | — not implemented | Multi-field update in one call; could replace several single-field tools below |
@@ -36,6 +41,10 @@ notice.
 | PUT | `/idr/v2/investigations/{id}/assignee` | `assignUserToInvestigation` | `assign_investigation` | Body: `{user_email_address}` |
 | GET | `/idr/v2/investigations/{identifier}/alerts` | `listInvestigationAlerts` | `list_investigation_alerts` | Alert metadata only, not event evidence |
 | DELETE | `/idr/v2/investigations/{identifier}/alerts/{alertRrn}` | `removeAlertFromInvestigation` | — not implemented | Unlink an alert from an investigation |
+| POST | `/idr/v2/investigations/aisoc-clusters` | `createAiSocClusterInvestigation` | — not implemented | New 2026-11. Create an investigation from AISOC alert clusters; requires a **user** API key |
+| POST | `/idr/v2/investigations/{investigationRrn}/aisoc-clusters` | `addAiSocClusters` | — not implemented | New 2026-11. Body: list of alert-cluster RRNs |
+| DELETE | `/idr/v2/investigations/{investigationRrn}/aisoc-clusters` | `removeAiSocClusters` | — not implemented | New 2026-11. Body: list of alert-cluster RRNs |
+| GET | `/idr/v2/health-metrics` | `getMetricsV2` | `get_health_metrics` (tool: `get_idr_health_metrics`) | Params `resourceTypes`, `withEpm`, `orgId`. Valid `resourceTypes` (live 400 message): `agent, collectors, network_sensors, orchestrator, data_exporters, scan_engines, honeypots, event_sources` — the spec's `sensors` is rejected. Records carry no `type`, and RRN formats differ per product (`rrn:agents:…`, `rrn:collection:…:eventsource:collector:…`, `rrn:icon:…:orchestrator:…`), so the tool requests one type per call. `207`/`200` metadata may carry `failed_to_load` / `unlicensed_resource_types` |
 | GET | `/idr/v2/investigations/{identifier}/rapid7-product-alerts` | `getInvestigationRapid7ProductAlertInfo` | `list_investigation_product_alerts` | Alerts from OTHER Rapid7 products (Threat Command, Insight Agent) tied to this investigation — separate from InsightIDR's own alerts. Response is a plain JSON array, not a paginated `{data, metadata}` object like other list endpoints here. |
 
 Alert evidence (`get_alert_evidence`) uses a **different** API path entirely —
@@ -50,7 +59,7 @@ an official spec; treat it as less stable than everything in this document.
 | `index` | int, ≥0, default 0 | Page index |
 | `size` | int, 1-100, default 20 | Page size |
 | `statuses` | comma-separated string | **Not `status`** — see caught bug above |
-| `sources` | comma-separated string | e.g. `USER,ALERT` (spec example) — actual enum per `InvestigationV2.source` is `MANUAL,HUNT,ALERT` |
+| `sources` | comma-separated string | `ALERT`, `HUNT`, `USER`, `AUTOMATION` — **verified live 2026-11-24**. The spec's `InvestigationV2.source` enum still says `MANUAL`, which the API rejects with `400` |
 | `priorities` | comma-separated string | `UNSPECIFIED,LOW,MEDIUM,HIGH,CRITICAL` |
 | `assignee.email` | string | Exact match, single email |
 | `start_time` / `end_time` | ISO timestamp | Filters on `created_time`; default window is the last 28 days if omitted |
@@ -58,11 +67,11 @@ an official spec; treat it as less stable than everything in this document.
 | `tags` | comma-separated string | ALL given tags must be present |
 | `multi-customer` | bool | MSP-style cross-org access; requires a user API key, not covered by this server |
 
-**Default sort is by priority, not creation time** — if a user asks for "the newest" or "most recent" investigations, you likely need `sort=created_time,DESC` once this is exposed as a tool parameter, not just take the first page as-is.
+**Default sort is by priority, not creation time, and the default window is 28 days** — for "newest"/"most recent" pass `sort="created_time,DESC"` to `get_investigations`; for older periods pass `start_time`. `list_investigations` validates `sort` client-side (field must be sortable, direction ASC/DESC) because an unrecognized value could be silently ignored, like `status` was.
 
 ## `_search` (searchInvestigations) — searchable/sortable fields
 
-More powerful filtering than `listInvestigations`, not yet exposed as a tool. Useful to know exists for a future "find investigations mentioning host X" or "actor Y" kind of request:
+More powerful filtering than `listInvestigations`, exposed as `search_investigations`. The operator per field is fixed in code (`SEARCHABLE_INVESTIGATION_FIELDS` in `src/insightidr_manager.py`) to the one this table documents:
 
 | Field | Searchable | Sortable | Operator |
 |---|---|---|---|
@@ -81,7 +90,7 @@ More powerful filtering than `listInvestigations`, not yet exposed as a tool. Us
 | `status` | Yes | No | EQUALS |
 | `title` | Yes | No | CONTAINS |
 
-`title` + CONTAINS is notable: `listInvestigations` has no free-text title search at all (per the skill's existing "Investigating a specific alert type" pattern, which works around this by filtering client-side) — `_search` actually can do this server-side. Worth implementing if title search becomes a frequent need.
+`title` + CONTAINS is notable: `listInvestigations` has no free-text title search at all — `_search` does it server-side. Body shape: `{"search": [{field, operator, value}], "sort": [{field, order}], "start_time"?, "end_time"?}`; paging (`size`, `index`) stays in the query string.
 
 ## Enums (from `InvestigationV2` and request schemas)
 
@@ -90,7 +99,7 @@ More powerful filtering than `listInvestigations`, not yet exposed as a tool. Us
 | `status` | `OPEN`, `INVESTIGATING`, `WAITING`, `CLOSED` |
 | `priority` | `UNSPECIFIED`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` |
 | `disposition` | `UNDECIDED` (default on creation), `BENIGN`, `MALICIOUS`, `NOT_APPLICABLE` |
-| `source` | `MANUAL`, `HUNT`, `ALERT` |
+| `source` | `ALERT`, `HUNT`, `USER`, `AUTOMATION` (live API; the spec's `MANUAL` is stale and rejected with `400`) |
 
 ## Why `bulk_close` is intentionally unused
 

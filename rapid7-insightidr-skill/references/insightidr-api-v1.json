@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.3",
+  "openapi": "3.1.0",
   "info": {
     "title": "InsightIDR API",
     "version": "v1",
@@ -54,20 +54,12 @@
       "description": "An API used to find and search InsightIDR assets. See https://docs.rapid7.com/insightidr/assets-on-your-domain for further information on assets."
     },
     {
-      "name": "Attachments Analyst",
-      "description": "An API used to upload, list, and download attachments on RFIs for MDR Analysts."
-    },
-    {
       "name": "Attachments",
       "description": "An API used to upload, list, download and delete attachments. For example, the create API can be used to upload an attachment."
     },
     {
       "name": "Comments",
       "description": "An API used to find, create, and delete comments. For example, these APIs can be used to create a comment for a particular investigation."
-    },
-    {
-      "name": "Comments Analyst",
-      "description": "An API used to find and create comments on RFIs for MDR Analysts."
     },
     {
       "name": "Community Threats",
@@ -84,10 +76,6 @@
     {
       "name": "Collectors",
       "description": "An API used to manage collectors for an organization."
-    },
-    {
-      "name": "Cloud Webhooks",
-      "description": "Operations for managing cloud webhook configurations"
     }
   ],
   "paths": {
@@ -910,134 +898,6 @@
         }
       }
     },
-    "/idr/v1/attachments/r7/{rrn}/{visibility}": {
-      "put": {
-        "tags": [
-          "Attachments Analyst"
-        ],
-        "summary": "Update attachment visibility on an RFI",
-        "description": "An API to update visibility of an attachment by using an RRN for an RFI. This API returns the attachment with the updated visibility.",
-        "operationId": "updateRfiAttachment",
-        "parameters": [
-          {
-            "name": "rrn",
-            "in": "path",
-            "description": "The RRN of the attachment.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "rrn:collaboration:us:01234567-89ab-cdef-0000-123123123123:attachment:ABCDEF543210"
-          },
-          {
-            "name": "visibility",
-            "in": "path",
-            "description": "The new visibility for the attachment (case insensitive).",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "INTERNAL",
-                "PUBLIC"
-              ],
-              "example": "INTERNAL"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/idr/v1/attachments": {
       "get": {
         "tags": [
@@ -1211,303 +1071,6 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Attachment"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/idr/v1/attachments/r7": {
-      "get": {
-        "tags": [
-          "Attachments Analyst"
-        ],
-        "summary": "List attachments on an RFI",
-        "description": "Retrieves attachments matching the given request parameters for an RFI target.",
-        "operationId": "listRfiAttachments",
-        "parameters": [
-          {
-            "name": "targetId",
-            "in": "query",
-            "description": "Return attachments with this RFI target.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "rrn:collaboration:us:01234567-89ab-cdef-0123-456789abcdef:rfi:fedcba98-7654-3210-fedc-ba9876543210"
-          },
-          {
-            "name": "index",
-            "in": "query",
-            "description": "The optional, 0 based index of the page to retrieve. Must be an integer greater than or equal to 0.",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 0,
-              "minimum": 0
-            },
-            "example": 0
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "description": "The optional size of the page to retrieve. Must be an integer greater than 0 or less than or equal to 100.",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1
-            },
-            "example": 20
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageAttachmentV3"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Attachments Analyst"
-        ],
-        "summary": "Upload attachment on an RFI",
-        "description": "An API used to upload one or more attachments for an RFI target.",
-        "operationId": "uploadRfiAttachment",
-        "parameters": [
-          {
-            "name": "targetId",
-            "in": "query",
-            "description": "ID of the target associated with the attachment/s. Optional if the attachment has no target.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "example": "rrn:collaboration:us:01234567-89ab-cdef-0123-456789abcdef:rfi:fedcba98-7654-3210-fedc-ba9876543210"
-          },
-          {
-            "name": "visibility",
-            "in": "query",
-            "description": "The visibility for the attachments (case insensitive).",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "INTERNAL",
-                "PUBLIC"
-              ],
-              "example": "INTERNAL"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/UploadAttachmentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AttachmentV3"
                   }
                 }
               }
@@ -1962,123 +1525,6 @@
         }
       }
     },
-    "/idr/v1/attachments/r7/{rrn}": {
-      "get": {
-        "tags": [
-          "Attachments Analyst"
-        ],
-        "summary": "Download attachment on an RFI",
-        "description": "An API you can use to download an attachment by RRN for an RFI.",
-        "operationId": "downloadRfiAttachment",
-        "parameters": [
-          {
-            "name": "rrn",
-            "in": "path",
-            "description": "The RRN of the attachment.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "rrn:collaboration:us:01234567-89ab-cdef-0000-123123123123:attachment:ABCDEF543210"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse1"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/idr/v1/comments/{rrn}/{visibility}": {
       "put": {
         "tags": [
@@ -2087,134 +1533,6 @@
         "summary": "Update comment visibility",
         "description": "An API to update visibility of a comment by using an RRN. This API returns the comment with the updated visibility .",
         "operationId": "updateComment",
-        "parameters": [
-          {
-            "name": "rrn",
-            "in": "path",
-            "description": "The RRN of the comment.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "rrn:collaboration:us:01234567-89ab-cdef-0000-123123123123:comment:ABCDEF543210"
-          },
-          {
-            "name": "visibility",
-            "in": "path",
-            "description": "The new visibility for the comment (case insensitive).",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "INTERNAL",
-                "PUBLIC"
-              ],
-              "example": "INTERNAL"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/idr/v1/comments/r7/{rrn}/{visibility}": {
-      "put": {
-        "tags": [
-          "Comments Analyst"
-        ],
-        "summary": "Update comment visibility",
-        "description": "An API to update visibility of a comment by using an RRN. This API returns the comment with the updated visibility.",
-        "operationId": "updateRfiCommentVisibility",
         "parameters": [
           {
             "name": "rrn",
@@ -2521,289 +1839,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Comment"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/idr/v1/comments/r7": {
-      "get": {
-        "tags": [
-          "Comments Analyst"
-        ],
-        "summary": "List comments on an RFI",
-        "description": "Retrieves a page of comments matching the given request parameters for an RFI target.",
-        "operationId": "listRfiComments",
-        "parameters": [
-          {
-            "name": "target",
-            "in": "query",
-            "description": "Return comments with this RFI target.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "rrn:collaboration:us:01234567-89ab-cdef-0123-456789abcdef:rfi:fedcba98-7654-3210-fedc-ba9876543210"
-          },
-          {
-            "name": "index",
-            "in": "query",
-            "description": "The optional 0-based index of the page to retrieve. Must be an integer greater than or equal to 0.",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 0,
-              "minimum": 0
-            },
-            "example": 0
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "description": "The optional size of the page to retrieve. Must be an integer greater than 0 or less or equal to 100.",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1
-            },
-            "example": 20
-          },
-          {
-            "name": "sortDirection",
-            "in": "query",
-            "description": "The direction in which comments should be sorted by creation time. The options are sort the page in ascending or descending directions. The comments are sorted by newest first by default.",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "DESC",
-              "enum": [
-                "ASC",
-                "DESC"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageCommentV3"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse2"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Comments Analyst"
-        ],
-        "summary": "Create comment on an RFI",
-        "description": "An API you can use to create comments on an RFI target.",
-        "operationId": "createRfiComment",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CommentCreateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommentV3"
                 }
               }
             }
@@ -3797,6 +2832,579 @@
         }
       }
     },
+    "/idr/v1/investigations/{id}/status/{status}": {
+      "put": {
+        "tags": [
+          "Investigations"
+        ],
+        "summary": "Set the status of an investigation",
+        "description": "An API that sets the status of the investigation with the given ID or RRN. This API returns the investigation with its status updated to the new state. If the investigation already has the given status, no change is made, but the investigation will still be returned.",
+        "operationId": "setStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID or RRN of the investigation to change the status of.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "examples": {
+              "investigationId": {
+                "description": "investigationId",
+                "value": "174e4f99-2ac7-4481-9301-4d24c34baf06"
+              },
+              "rrn": {
+                "description": "rrn",
+                "value": "rrn:investigation:us1:a2c78570-5346-4d76-b57a-230da72c5e58:investigation:ABSJB123U3O9"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "in": "path",
+            "description": "The new status for the investigation (case-insensitive).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "CLOSED",
+                "INVESTIGATING"
+              ],
+              "example": "OPEN"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Investigation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient Permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/idr/v1/investigations/{id}/assignee": {
+      "put": {
+        "tags": [
+          "Investigations"
+        ],
+        "summary": "Assign user to investigation",
+        "description": "An API that assigns a user to the specified investigation. The user must be a platform administrator, product administrator, or read/write user with access to either InsightIDR or InsightUBA.",
+        "operationId": "assignUserToInvestigation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID or RRN of the investigation to assign the user to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "174e4f99-2ac7-4481-9301-4d24c34baf06"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignUserToInvestigationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Investigation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient Permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/idr/v1/investigations/bulk_close": {
+      "post": {
+        "tags": [
+          "Investigations"
+        ],
+        "summary": "Close investigations in bulk",
+        "description": "An API to close all investigations that match the parameters provided in the request body. This API returns the number of investigations that were closed and a list of their IDs.",
+        "operationId": "bulkCloseInvestigations",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCloseInvestigationsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosedInvestigations"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient Permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/idr/v1/investigations": {
+      "get": {
+        "tags": [
+          "Investigations"
+        ],
+        "summary": "List investigations",
+        "description": "An API to list all investigations. This API retrieves a page of investigations matching the given request parameters. The investigations will always be sorted by investigation created_time in descending order.",
+        "operationId": "listInvestigations",
+        "parameters": [
+          {
+            "name": "index",
+            "in": "query",
+            "description": "The optional, 0 based index of the page to retrieve.  Must be an integer greater than or equal to 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            },
+            "example": 0
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The optional size of the page to retrieve. Must be an integer greater than 0 or less then or equal to 1000.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 1000,
+              "minimum": 1
+            },
+            "example": 20
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "description": "An optional, comma-separated set of investigation statuses. Only investigations whose status matches one of the entries in the list will be returned.  If this parameter, is omitted investigations with any status may be returned.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "OPEN, CLOSED, INVESTIGATING"
+          },
+          {
+            "name": "start_time",
+            "in": "query",
+            "description": "An optional, ISO-formatted timestamp. Only investigations whose createTime is after this date will be returned by the API. If this parameter is omitted, investigations with any create_time may be returned.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2018-07-01T00:00:00Z"
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "description": "An optional, ISO-formatted timestamp. Only investigations whose createTime is before this date will be returned by the API. If this parameter is omitted, investigations with any create_time may be returned.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2018-07-04T00:00:00Z"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageInvestigation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient Permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse3"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/idr/v1/users/_search": {
       "post": {
         "tags": [
@@ -4745,1313 +4353,6 @@
           }
         }
       }
-    },
-    "/idr/v1/cloud-webhooks": {
-      "get": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Get all cloud webhooks",
-        "description": "Retrieves paginated cloud webhook configurations for the organization",
-        "operationId": "getAllCloudWebhooks",
-        "parameters": [
-          {
-            "name": "index",
-            "in": "query",
-            "description": "Index of the page to retrieve. Must be an integer greater than or equal to 0.",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 0,
-              "minimum": 0
-            },
-            "example": 0
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "description": "Size of the page to retrieve. Must be an integer greater than 0 or less than or equal to 100.",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 10,
-              "maximum": 100,
-              "minimum": 1
-            },
-            "example": 10
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Page"
-                },
-                "example": {
-                  "data": [
-                    {
-                      "rrn": "rrn:collection:us:orgId:exporter:cloud:test-webhook",
-                      "name": "my-webhook",
-                      "url": "https://example.com/webhook",
-                      "create_time": "2025-11-21T10:30:00Z",
-                      "modified_time": "2025-11-21T15:45:00Z",
-                      "last_event_sent_time": "2025-11-21T16:00:00Z",
-                      "validation_config": {
-                        "type": "OAUTH",
-                        "client_id": "client-123",
-                        "client_secret_grant_rrn": "rrn:credential:local:02349234:grant:1234",
-                        "scope": "webhook:write",
-                        "auth_service_url": "https://auth.example.com/token"
-                      }
-                    }
-                  ],
-                  "metadata": {
-                    "index": 0,
-                    "size": 1,
-                    "total_pages": 1,
-                    "total_data": 1
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Create cloud webhook",
-        "description": "Creates a new cloud webhook configuration",
-        "operationId": "createCloudWebhook",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CloudWebhookConfigCreateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Cloud webhook configuration created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CloudWebhookConfigResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/idr/v1/cloud-webhooks/{webhook_rrn}/validation": {
-      "post": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Add validation to cloud webhook",
-        "description": "Adds validation configuration to an existing cloud webhook",
-        "operationId": "addValidationConfig",
-        "parameters": [
-          {
-            "name": "webhook_rrn",
-            "in": "path",
-            "description": "The RRN of the webhook to add validation to",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "description": "The validation configuration wrapper to add",
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/OAuthConfigCreateRequest"
-                  }
-                ]
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Validation configuration added successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CloudWebhookConfigResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Validation configuration already exists for this webhook",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CloudWebhookConfigResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Remove validation from cloud webhook",
-        "description": "Removes validation configuration from an existing cloud webhook",
-        "operationId": "deleteValidationConfig",
-        "parameters": [
-          {
-            "name": "webhook_rrn",
-            "in": "path",
-            "description": "The RRN of the webhook to remove validation from",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Validation configuration removed successfully"
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Update validation for cloud webhook",
-        "description": "Updates validation configuration on an existing cloud webhook",
-        "operationId": "updateValidationConfig",
-        "parameters": [
-          {
-            "name": "webhook_rrn",
-            "in": "path",
-            "description": "The RRN of the webhook to update validation for",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "description": "The updated validation configuration wrapper",
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/OAuthConfigUpdateRequest"
-                  }
-                ]
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Validation configuration updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CloudWebhookConfigResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/idr/v1/cloud-webhooks/{webhook_rrn}/test": {
-      "post": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Test cloud webhook",
-        "description": "Triggers a test event for the specified webhook configuration",
-        "operationId": "triggerTestEvent",
-        "parameters": [
-          {
-            "name": "webhook_rrn",
-            "in": "path",
-            "description": "The RRN of the webhook to test",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Test event triggered successfully",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "example": "Triggered test event with eventId:12345"
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/idr/v1/cloud-webhooks/{webhook_rrn}/replay": {
-      "post": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Replay cloud webhook events",
-        "description": "Initiates a replay of cloud webhook events for a specific webhook within an organization.\n\n**Note**: At least one of the following must be provided:\n- event_ids\n- start_time\n- end_time\n\nTime range behavior (times must be in UTC and ISO 8601 format):\n- If both start_time and end_time are provided:\n  - Validate that start_time < end_time\n  - Use the exact range\n  - Example: start=10:00, end=12:00 → Uses 10:00–12:00\n\n- If only start_time is provided:\n  - Range is from start_time to start_time + 60 seconds\n  - Example: start=10:00 → Uses 10:00–10:01\n\n- If only end_time is provided:\n  - Range is from 60 seconds before end_time to end_time\n  - Example: end=12:00 → Uses 11:59–12:00\n\nAdditional constraints:\n- The start_time cannot be more than 3 days in the past from the current time.",
-        "operationId": "replayWebhookEvents",
-        "parameters": [
-          {
-            "name": "webhook_rrn",
-            "in": "path",
-            "description": "The RRN of the cloud webhook",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CloudWebhookReplayRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "Replay request accepted for processing",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CloudWebhookReplayResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/idr/v1/cloud-webhooks/{webhook_rrn}": {
-      "get": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Get cloud webhook by RRN",
-        "description": "Retrieves the configuration for a specific cloud webhook by ID",
-        "operationId": "getCloudWebhook",
-        "parameters": [
-          {
-            "name": "webhook_rrn",
-            "in": "path",
-            "description": "The RRN of the cloud webhook",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Cloud webhook configuration retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CloudWebhookConfigResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Delete cloud webhook",
-        "description": "Deletes a cloud webhook configuration",
-        "operationId": "deleteCloudWebhook",
-        "parameters": [
-          {
-            "name": "webhook_rrn",
-            "in": "path",
-            "description": "The RRN of the cloud webhook",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Cloud webhook configuration deleted successfully"
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Cloud Webhooks"
-        ],
-        "summary": "Update cloud webhook",
-        "description": "Updates an existing cloud webhook configuration",
-        "operationId": "updateCloudWebhook",
-        "parameters": [
-          {
-            "name": "webhook_rrn",
-            "in": "path",
-            "description": "The RRN of the cloud webhook",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CloudWebhookConfigUpdateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Cloud webhook configuration updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CloudWebhookConfigResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Insufficient Permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Entity Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse4"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -6465,95 +4766,6 @@
           }
         }
       },
-      "AttachmentV3": {
-        "type": "object",
-        "properties": {
-          "rrn": {
-            "$ref": "#/components/schemas/RRN",
-            "description": "The RRN of the attachment.",
-            "example": "rrn:collaboration::orgId_123:attachment:d7812988-f171-4164-9309-65c32d5da28f"
-          },
-          "creator": {
-            "$ref": "#/components/schemas/CreatorV3",
-            "description": "Who or what created the resource."
-          },
-          "created_time": {
-            "type": "string",
-            "description": "The time the attachment was created as an ISO formatted timestamp.",
-            "example": "2018-06-06T16:56:42Z"
-          },
-          "file_name": {
-            "type": "string",
-            "description": "The original filename of the uploaded attachment.",
-            "example": "screenshot.png"
-          },
-          "mime_type": {
-            "type": "string",
-            "description": "The mime type of the attachment.",
-            "example": "image/png"
-          },
-          "size": {
-            "type": "integer",
-            "format": "int64",
-            "description": "The size in bytes of the attachment.",
-            "example": 12345
-          },
-          "scan_status": {
-            "type": "string",
-            "description": "The scan status of the attachment, indicating whether the attachment has been scanned and, if so, the result. INFECTED or PENDING attachments may not be downloaded.",
-            "example": "CLEAN"
-          },
-          "target": {
-            "type": "string",
-            "description": "The target RRN that this attachment is associated with.",
-            "example": "rrn:alerts:us:01234567-89ab-cdef-0000-123123123123:alert:1:ABCDEF543210"
-          },
-          "visibility": {
-            "type": "string",
-            "description": "Who can view the attachment.",
-            "example": "PUBLIC"
-          }
-        },
-        "required": [
-          "created_time",
-          "creator",
-          "file_name",
-          "mime_type",
-          "rrn",
-          "scan_status",
-          "size"
-        ]
-      },
-      "CreatorV3": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "description": "A type that denotes who or what created a resource.",
-            "enum": [
-              "USER",
-              "ORG_API_KEY",
-              "SYSTEM"
-            ],
-            "example": "USER"
-          },
-          "name": {
-            "type": "string",
-            "description": "The name of who or what created a resource.",
-            "example": "John Doe"
-          },
-          "id": {
-            "type": "string",
-            "description": "The id of the creator.",
-            "example": "dbd99b60-0ffb-41af-8e43-bea5a4eb85e0"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "type"
-        ]
-      },
       "PageAttachment": {
         "type": "object",
         "properties": {
@@ -6634,26 +4846,6 @@
         },
         "required": [
           "field"
-        ]
-      },
-      "PageAttachmentV3": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "description": "The list of data that matches the pagination parameters. If no results match this will be an empty list.",
-            "items": {
-              "$ref": "#/components/schemas/AttachmentV3"
-            }
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/PageMetadata1",
-            "description": "The pagination parameters used to generate this page result."
-          }
-        },
-        "required": [
-          "data",
-          "metadata"
         ]
       },
       "ErrorResponse2": {
@@ -6754,53 +4946,6 @@
           "target"
         ]
       },
-      "CommentV3": {
-        "type": "object",
-        "properties": {
-          "created_time": {
-            "type": "string",
-            "description": "The time the comment was created as an ISO formatted timestamp.",
-            "example": "2018-06-06T16:56:42Z"
-          },
-          "rrn": {
-            "type": "string",
-            "description": "The RRN of the comment.",
-            "example": "rrn:collaboration:us:01234567-89ab-cdef-0000-123123123123:comment:98765FEBCAD"
-          },
-          "target": {
-            "type": "string",
-            "description": "The target where the comment belongs to.",
-            "example": "rrn:alerts:us:01234567-89ab-cdef-0000-123123123123:alert:1:ABCDEF543210"
-          },
-          "creator": {
-            "$ref": "#/components/schemas/CreatorV3",
-            "description": "Who or what created the resource."
-          },
-          "body": {
-            "type": "string",
-            "description": "The body of the comment.",
-            "example": "Here is my comment."
-          },
-          "visibility": {
-            "type": "string",
-            "description": "Who can view the comment.",
-            "example": "PUBLIC"
-          },
-          "attachments": {
-            "type": "array",
-            "description": "List of attachments associated with this comment.",
-            "items": {
-              "$ref": "#/components/schemas/AttachmentV3"
-            }
-          }
-        },
-        "required": [
-          "body",
-          "creator",
-          "rrn",
-          "target"
-        ]
-      },
       "PageComment": {
         "type": "object",
         "properties": {
@@ -6860,26 +5005,6 @@
           "size",
           "total_data",
           "total_pages"
-        ]
-      },
-      "PageCommentV3": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "description": "The list of data that matches the pagination parameters. If no results match this will be an empty list.",
-            "items": {
-              "$ref": "#/components/schemas/CommentV3"
-            }
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/PageMetadata2",
-            "description": "The pagination parameters used to generate this page result."
-          }
-        },
-        "required": [
-          "data",
-          "metadata"
         ]
       },
       "Threat": {
@@ -6954,6 +5079,11 @@
             "type": "string",
             "description": "An identifier that uniquely identifies the failed request.",
             "example": "An identifier that uniquely identifies the failed request."
+          },
+          "additional_details": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Additional structured error details forwarded from a downstream service, when available."
           }
         },
         "required": [
@@ -7299,330 +5429,6 @@
           "id",
           "name",
           "rrn"
-        ]
-      },
-      "ErrorResponse4": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "A human-readable message describing the error that occurred.",
-            "example": "A human-readable message describing the error that occurred."
-          },
-          "correlation_id": {
-            "type": "string",
-            "description": "An identifier that uniquely identifies the failed request.",
-            "example": "An identifier that uniquely identifies the failed request."
-          }
-        },
-        "required": [
-          "message"
-        ]
-      },
-      "CloudWebhookConfigCreateRequest": {
-        "type": "object",
-        "description": "The cloud webhook configuration to create",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "The name of the webhook",
-            "example": "my-webhook"
-          },
-          "url": {
-            "type": "string",
-            "description": "The URL of the webhook endpoint",
-            "example": "https://example.com/webhook",
-            "pattern": "^(http|https)://.*$"
-          },
-          "validation_config": {
-            "description": "validation configuration for the webhook",
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/OAuthConfigCreateRequest"
-              }
-            ]
-          }
-        },
-        "required": [
-          "name",
-          "url"
-        ]
-      },
-      "OAuthConfigCreateRequest": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/ValidationConfigCreateRequest"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "client_id": {
-                "type": "string",
-                "description": "Client Id used for auth service endpoint",
-                "example": "client-123"
-              },
-              "client_secret_grant_rrn": {
-                "type": "string",
-                "description": "Client secret grant rrn used to retrieve the secret used for auth service endpoint. The secret can be created using credential management API endpoints documented in PCM C1 docs.",
-                "example": "rrn:credential:local:02349234:grant:1234"
-              },
-              "scope": {
-                "type": "string",
-                "description": "Scope passed as query param at the time of sending event to the webhook",
-                "example": "webhook:write"
-              },
-              "auth_service_url": {
-                "type": "string",
-                "description": "Auth endpoint used to fetch the access token that would be used to send authorization token to the webhook",
-                "example": "https://auth.example.com/token"
-              }
-            }
-          }
-        ],
-        "required": [
-          "auth_service_url",
-          "client_id",
-          "client_secret_grant_rrn",
-          "type"
-        ]
-      },
-      "ValidationConfigCreateRequest": {
-        "type": "object",
-        "discriminator": {
-          "propertyName": "type"
-        },
-        "properties": {
-          "type": {
-            "type": "string",
-            "description": "Validation type for the webhook",
-            "enum": [
-              "OAUTH"
-            ],
-            "example": "OAUTH"
-          }
-        },
-        "required": [
-          "type"
-        ]
-      },
-      "CloudWebhookConfigResponse": {
-        "type": "object",
-        "properties": {
-          "rrn": {
-            "type": "string",
-            "description": "The unique identifier of the webhook configuration",
-            "example": "rrn:collection:us:orgId:exporter:cloud:test-webhook",
-            "minLength": 1
-          },
-          "name": {
-            "type": "string",
-            "description": "The name of the webhook",
-            "example": "my-webhook",
-            "minLength": 1
-          },
-          "url": {
-            "type": "string",
-            "description": "The URL of the webhook endpoint",
-            "example": "https://example.com/webhook",
-            "minLength": 1
-          },
-          "create_time": {
-            "type": "string",
-            "description": "The timestamp when the webhook was created",
-            "example": "2025-11-21T10:30:00Z",
-            "minLength": 1
-          },
-          "modified_time": {
-            "type": "string",
-            "description": "The timestamp when the webhook configuration was last modified by the user (e.g., changes to validation config, name, or URL).",
-            "example": "2025-11-21T15:45:00Z"
-          },
-          "last_event_sent_time": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "The timestamp when the last event was sent to the webhook",
-            "example": "2025-11-21T16:00:00Z"
-          },
-          "validation_config": {
-            "type": "null",
-            "$ref": "#/components/schemas/ValidationConfigResponse",
-            "description": "Validation configuration for the webhook"
-          }
-        },
-        "required": [
-          "create_time",
-          "name",
-          "rrn",
-          "url"
-        ]
-      },
-      "OAuthConfigResponse": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "description": "Validation type for the webhook",
-            "example": "OAUTH"
-          },
-          "client_id": {
-            "type": "string",
-            "description": "Client Id used for auth service endpoint",
-            "example": "client-123"
-          },
-          "client_secret_grant_rrn": {
-            "type": "string",
-            "description": "Client secret grant rrn used to retrieve the secret used for auth service endpoint",
-            "example": "rrn:credential:local:02349234:grant:1234"
-          },
-          "scope": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Scope passed in query param at the time of sending event to the webhook",
-            "example": "webhook:write"
-          },
-          "auth_service_url": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Auth endpoint used to fetch the access token that would be used to send authorization token to the webhook",
-            "example": "https://auth.example.com/token"
-          }
-        }
-      },
-      "ValidationConfigResponse": {
-        "type": "object",
-        "description": "Validation configuration details for the webhook",
-        "discriminator": {
-          "propertyName": "type",
-          "mapping": {
-            "OAUTH": "#/components/schemas/OAuthConfigResponse"
-          }
-        },
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/OAuthConfigResponse"
-          }
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "description": "Validation type for the webhook",
-            "example": "OAUTH"
-          }
-        }
-      },
-      "CloudWebhookReplayRequest": {
-        "type": "object",
-        "description": "Replay request parameters",
-        "properties": {
-          "event_ids": {
-            "type": "array",
-            "description": "List of event IDs to replay",
-            "example": [
-              "e5a210d2-3478-41b5-8eed-584e03ae3af1",
-              "d48fab9c-5c81-45a8-adad-cd0839bb4c0c"
-            ],
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 100,
-            "minItems": 0,
-            "uniqueItems": true
-          },
-          "start_time": {
-            "type": "string",
-            "description": "ISO formatted UTC timestamp for when to replay events from (inclusive). Defaults to 60 seconds before the end date time.",
-            "example": "2025-10-22T06:28:31Z"
-          },
-          "end_time": {
-            "type": "string",
-            "description": "ISO formatted UTC timestamp for when to replay events to (inclusive). Defaults to now.",
-            "example": "2025-10-21T03:14:15Z"
-          }
-        }
-      },
-      "CloudWebhookReplayResult": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string"
-          }
-        }
-      },
-      "CloudWebhookConfigUpdateRequest": {
-        "type": "object",
-        "description": "The update cloud webhook configuration",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "The name of the webhook",
-            "example": "my-webhook"
-          },
-          "url": {
-            "type": "string",
-            "description": "The URL of the webhook endpoint",
-            "example": "https://example.com/webhook",
-            "pattern": "^(http|https)://.*$"
-          }
-        }
-      },
-      "OAuthConfigUpdateRequest": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/ValidationConfigUpdateRequest"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "client_id": {
-                "type": "string",
-                "description": "Client Id used for auth service endpoint",
-                "example": "client-123"
-              },
-              "client_secret_grant_rrn": {
-                "type": "string",
-                "description": "Client secret grant rrn used to retrieve the secret used for auth service endpoint. The secret can be created using credential management API endpoints documented in PCM C1 docs.",
-                "example": "rrn:credential:local:02349234:grant:1234"
-              },
-              "auth_service_url": {
-                "type": "string",
-                "description": "Auth endpoint used to fetch the access token that would be used to send authorization token to the webhook",
-                "example": "https://auth.example.com/token"
-              },
-              "scope": {
-                "type": "string",
-                "description": "Scope passed as query param at the time of sending event to the webhook",
-                "example": "webhook:write"
-              }
-            }
-          }
-        ],
-        "required": [
-          "type"
-        ]
-      },
-      "ValidationConfigUpdateRequest": {
-        "type": "object",
-        "discriminator": {
-          "propertyName": "type"
-        },
-        "properties": {
-          "type": {
-            "type": "string",
-            "description": "Validation type for the webhook",
-            "enum": [
-              "OAUTH"
-            ],
-            "example": "OAUTH"
-          }
-        },
-        "required": [
-          "type"
         ]
       }
     }

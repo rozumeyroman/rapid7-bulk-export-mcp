@@ -1,6 +1,6 @@
 {
-  "last_changed": "2026-08-27T11:04:14.578349+00:00",
-  "last_checked": "2026-08-27T11:04:26.462930+00:00",
-  "sha256": "52dacd9ae700b7a261da566f528520e51e7ad17790cdc45b9889d87f91e12079",
+  "last_changed": "2026-11-24T21:31:37.771828+00:00",
+  "last_checked": "2026-11-24T21:42:18.343874+00:00",
+  "sha256": "c3d727295707221fef942fbc7c8f6866027b327cadaa5e583007b52c1938f4bb",
   "source_url": "https://help.rapid7.com/insightidr/en-us/api/v2/insightidr-api-v2.json"
 }

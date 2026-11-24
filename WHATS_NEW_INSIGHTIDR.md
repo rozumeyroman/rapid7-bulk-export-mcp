@@ -26,6 +26,7 @@ src/config.py: load_config() → idr_base (regional base URL), shared with Insig
 | `src/config.py` | `IDR_BASE_ENDPOINTS` — регіональна мапа base URL для Command Platform, окрема від GraphQL `REGION_ENDPOINTS`. | `IDR_BASE_ENDPOINTS` — regional base-URL map for the Command Platform, separate from GraphQL's `REGION_ENDPOINTS`. |
 | `src/insightidr_client.py` | REST-транспорт (аналог `graphql_client.py`): заголовки, `Accept-version`. Не знає про бізнес-логіку. | REST transport (analogous to `graphql_client.py`): headers, `Accept-version`. No business logic. |
 | `src/insightidr_manager.py` | Investigations v2 + Comments v1: список/деталі/закриття/призначення/коментарі. Валідація статусів/dispositions. | Investigations v2 + Comments v1: list/detail/close/assign/comments. Status/disposition validation. |
+| `src/insightidr_context_manager.py` | Read-only контекст для тріажу: users/assets/accounts/local accounts (v1) і health metrics (v2). | Read-only triage context: users/assets/accounts/local accounts (v1) and health metrics (v2). |
 | `src/insightidr_log_search_manager.py` | Log Search API (LEQL): окрема API-родина, інший базовий шлях, async polling. | Log Search API (LEQL): a separate API family, different base path, async polling. |
 | `src/mcp_server.py` | `@mcp.tool` визначення, форматування відповідей, safety-flow для write-операцій. | `@mcp.tool` definitions, response formatting, safety flow for write operations. |
 | `rapid7-insightidr-skill/` | Agent skill: SKILL.md, README.md, `references/*` (офіційні OpenAPI-специ + конденсовані нотатки). | Agent skill: SKILL.md, README.md, `references/*` (official OpenAPI specs + condensed notes). |
@@ -35,7 +36,9 @@ src/config.py: load_config() → idr_base (regional base URL), shared with Insig
 
 | Область | MCP tools |
 |---|---|
-| Investigations | `get_investigations`, `get_investigation_details`, `close_investigation` (confirm required) |
+| Investigations | `get_investigations` (incl. `start_time`/`end_time`/`sort`), `search_investigations`, `get_investigation_details`, `close_investigation` (confirm required) |
+| Entity context | `search_idr_entities`, `get_idr_entity` — users, assets, accounts, local accounts (API v1) |
+| Platform health | `get_idr_health_metrics` — agents, collectors, event sources, sensors (API v2) |
 | Alert evidence | `get_alert_evidence` — raw source event (user, IP, geolocation, service, result) |
 | Assignment | `list_investigation_assignees`, `assign_investigation` (confirm required) |
 | Comments | `list_investigation_comments`, `add_investigation_comment` |
@@ -46,7 +49,7 @@ src/config.py: load_config() → idr_base (regional base URL), shared with Insig
 Дизайнові принципи / Design principles:
 - Investigations **ніколи** не закриваються автоматично — обов'язковий two-step preview/confirm для всіх write-операцій, окрім `add_investigation_comment` (не змінює стан). / Investigations are **never** closed automatically — mandatory two-step preview/confirm for all write operations except `add_investigation_comment` (doesn't change state).
 - Close використовує точковий `/status/CLOSED` (один ID), а не `bulk_close` (за фільтром). / Close uses the targeted `/status/CLOSED` (one ID), not `bulk_close` (filter-based).
-- `get_alert_evidence`/`query_logs`/`run_saved_query` повертають реальні персональні дані — застереження в docstring і SKILL.md. / `get_alert_evidence`/`query_logs`/`run_saved_query` return real personal data — flagged in docstrings and SKILL.md.
+- `get_alert_evidence`/`query_logs`/`run_saved_query`/`search_idr_entities`/`get_idr_entity` повертають реальні персональні дані — застереження в docstring і SKILL.md. / `get_alert_evidence`/`query_logs`/`run_saved_query`/`search_idr_entities`/`get_idr_entity` return real personal data — flagged in docstrings and SKILL.md.
 
 ## Виправлені баги / Bugs found and fixed
 
@@ -65,7 +68,8 @@ src/config.py: load_config() → idr_base (regional base URL), shared with Insig
 ## API references used / Використані API-специфікації
 
 - Investigations v2 (preview, `Accept-version: investigations-preview`) — official OpenAPI spec, `rapid7-insightidr-skill/references/investigations-api-v2.json`.
-- Comments v1 (stable) — official OpenAPI spec, `references/insightidr-api-v1.json`.
+- Comments, Users, Assets, Accounts v1 (stable) — official OpenAPI spec, `references/insightidr-api-v1.json`.
+- Health Metrics v2 — same v2 spec as Investigations, but sent without the preview header.
 - Alert Evidence (`/idr/at/alerts/{id}/evidences`) — undocumented in any spec, found via Rapid7 community forum, verified live.
 - Log Search — no official OpenAPI spec exists; built from Rapid7's blog post, Rapid7's official Postman collection (`rapid7/logentries-postman-collection`), and a community spec, cross-checked and verified live. Notably: `POST /query/saved_queries` requires the body wrapped in `{"saved_query": {...}}`, found only in the Postman collection.
 

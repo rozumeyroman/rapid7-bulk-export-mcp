@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **InsightIDR: time window and ordering for `get_investigations`.** New `start_time`,
+  `end_time` and `sort` parameters. Without `start_time` the API only returns the last
+  28 days, sorted by priority; the tool docstring and skill now say so. `sort` is validated
+  client-side.
+- **InsightIDR: `search_investigations`.** Server-side search (`POST /idr/v2/investigations/_search`)
+  by title text, involved user or host, MITRE technique, detection rule, status, priority and
+  source. Newest first by default.
+- **InsightIDR: entity context.** `search_idr_entities` and `get_idr_entity` look up users,
+  assets, accounts and local accounts (InsightIDR API v1). User and account records are flagged
+  as personal data.
+- **InsightIDR: `get_idr_health_metrics`.** Health of agents, collectors, event sources, network sensors
+  and other collection components (`GET /idr/v2/health-metrics`), with `problems_only` and
+  optional events-per-minute. Partial (`207`) results report the resource types that failed to
+  load or are not licensed.
+
+### Changed
+
+- Fixed the documented investigation `source` values: the live API accepts `ALERT`, `HUNT`,
+  `USER` and `AUTOMATION`; `MANUAL` (from the spec) is rejected.
+- Refreshed the bundled InsightIDR v1 and v2 OpenAPI specs. Upstream added AISOC-cluster
+  operations and v2 health metrics, and dropped cloud webhooks and RFI analyst endpoints from
+  the public v1 spec.
+
 ## 0.7.0
 
 ### Breaking

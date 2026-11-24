@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.3",
+  "openapi": "3.1.0",
   "info": {
     "title": "InsightIDR API",
     "version": "v2",
@@ -44,6 +44,10 @@
     {
       "name": "Investigations",
       "description": "An API used to search, access, and modify investigations. To learn more about investigations, see our documentation at: https://docs.rapid7.com/insightidr/investigations"
+    },
+    {
+      "name": "Health Metrics",
+      "description": "An API used to retrieve health metrics of an organization."
     }
   ],
   "paths": {
@@ -1006,6 +1010,296 @@
         }
       }
     },
+    "/idr/v2/investigations/{investigationRrn}/aisoc-clusters": {
+      "post": {
+        "tags": [
+          "Investigations"
+        ],
+        "summary": "Add aisoc clusters to an investigation",
+        "description": "An API to associate one or more aisoc alert clusters with an existing investigation, specified by rrn. The request body is a list of alert cluster rrns. If every alert cluster is associated successfully, the API returns a 204. If one or more of the alert cluster rrns are already associated with a different investigation, the API returns a 207 (Multi-Status) response whose body contains the alert cluster rrns that were NOT added and the investigations they are associated with.",
+        "operationId": "addAiSocClusters",
+        "parameters": [
+          {
+            "name": "investigationRrn",
+            "in": "path",
+            "description": "The rrn of the investigation to associate the alert clusters with.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "rrn:investigation:us1:174e4f99-2ac7-4481-9301-4d24c34baf06:investigation:6A74T2A4"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "description": "The rrns of the alert clusters to associate with the investigation.",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSocClusterInvestigationResponseV2"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content. All alert clusters were associated with the investigation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSocClusterInvestigationResponseV2"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "One or more alert cluster rrns are associated to different investigations and were not added. The response body carries the association-conflict metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSocClusterInvestigationResponseV2"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient Permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Investigations"
+        ],
+        "summary": "Remove aisoc clusters from an investigation",
+        "description": "An API to remove one or more aisoc alert clusters from an existing investigation, specified by rrn. The request body is a list of alert cluster rrns.",
+        "operationId": "removeAiSocClusters",
+        "parameters": [
+          {
+            "name": "investigationRrn",
+            "in": "path",
+            "description": "The rrn of the investigation to remove the alert clusters from.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "rrn:investigation:us1:174e4f99-2ac7-4481-9301-4d24c34baf06:investigation:6A74T2A4"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "description": "The rrns of the alert clusters to remove from the investigation.",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "204": {
+            "description": "No Content. The alert clusters were removed from the investigation."
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient Permissions",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/idr/v2/investigations/bulk_close": {
       "post": {
         "tags": [
@@ -1031,6 +1325,138 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ClosedInvestigationsV2"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient Permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/idr/v2/investigations/aisoc-clusters": {
+      "post": {
+        "tags": [
+          "Investigations"
+        ],
+        "summary": "Create investigation with aisoc clusters",
+        "description": "An API to manually create an investigation and associate one or more aisoc alert clusters with it, optionally setting tags. Creating an investigation requires a user API key in the request headers. If every alert cluster is associated successfully, the API returns a 200 with the newly created investigation. If one or more of the provided alert cluster rrns are already associated with a different investigation, the API returns a 207 (Multi-Status) response whose body contains the newly created investigation rrn and the conflicting associations.",
+        "operationId": "createAiSocClusterInvestigation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAiSocClusterInvestigationRequestV2"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSocClusterInvestigationResponseV2"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "The investigation was created but one or more alert cluster rrns are associated to different investigations and were not added.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSocClusterInvestigationResponseV2"
                 }
               }
             }
@@ -2001,6 +2427,564 @@
           }
         }
       }
+    },
+    "/idr/v2/health-metrics": {
+      "get": {
+        "tags": [
+          "Health Metrics"
+        ],
+        "summary": "Retrieve health metrics by org",
+        "description": "Retrieve paginated health metrics for the given org. In the event of a 207 response, there may be two additional metadata fields in the response. 'failed_to_load' contains the the resource types that did not successfully load. 'unlicensed_resource_types' contains resource types that were requested, but for which the org does not have access to. ",
+        "operationId": "getMetricsV2",
+        "parameters": [
+          {
+            "name": "index",
+            "in": "query",
+            "description": "The optional, 0 based index of the page to retrieve.  Must be an integer greater than or equal to 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            },
+            "example": 0
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The optional size of the page to retrieve. Must be an integer greater than 0 or less than or equal to 100.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1
+            },
+            "example": 20
+          },
+          {
+            "name": "resourceTypes",
+            "in": "query",
+            "description": "An optional, comma-separated set of resource types. Only resources whose type matches one of the entries in the list are returned. If this parameter is omitted, health metrics with any resource type may be returned.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "agent,collectors"
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "description": "Optional organization ID to get metrics for. If not specified, metrics for the user's current organization will be returned. User must have access to the specified organization.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "withEpm",
+            "in": "query",
+            "description": "Optional flag to include events per minute (EPM) for event sources. If true, performance of the API may be reduced.",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageHealthMetricsV2"
+                },
+                "examples": {
+                  "Agent": {
+                    "description": "Health metrics for agent resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:agent:678",
+                          "offline": 5,
+                          "online": 25,
+                          "stale": 3,
+                          "total": 33
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Collectors": {
+                    "description": "Health metrics for collector resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:collector:abc123",
+                          "id": "collector-001",
+                          "name": "Main Collector",
+                          "state": "RUNNING",
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "event_sources_used": 15,
+                          "max_event_sources": 100,
+                          "memory_used": 2048,
+                          "max_memory": 4096,
+                          "percent_cpu_used": 25.5,
+                          "hostname": "example.rapid7.com",
+                          "ip_address": "192.0.2.0"
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Data Exporters": {
+                    "description": "Health metrics for data exporter resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:data_exporter:exporter001",
+                          "name": "Main Data Exporter",
+                          "state": "RUNNING",
+                          "last_active": "2025-09-18T10:30:00Z"
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Event Sources": {
+                    "description": "Health metrics for event source resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:event_source:source001",
+                          "name": "Main Event Source",
+                          "state": "ACTIVE",
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "events_per_minute": 100
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Honeypots": {
+                    "description": "Health metrics for honeypot resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:honeypot:honeypot001",
+                          "id": "honeypot-001",
+                          "name": "Main Honeypot",
+                          "state": "ACTIVE",
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "memory_used": 512,
+                          "max_memory": 1024,
+                          "percent_cpu_used": 10.5
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Orchestrator": {
+                    "description": "Health metrics for orchestrator resource",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:orchestrator:orch001",
+                          "name": "Main Orchestrator",
+                          "state": "RUNNING",
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "cpu_used": 35.8,
+                          "memory_used": 3072,
+                          "max_memory": 6144,
+                          "storage_used": 20971520,
+                          "max_storage": 52428800,
+                          "hostname": "example.rapid7.com",
+                          "ip_address": "192.0.2.0"
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Scan Engines": {
+                    "description": "Health metrics for scan engine resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:scan_engine:engine001",
+                          "name": "Main Scan Engine",
+                          "state": "RUNNING",
+                          "storage_used": 52428800,
+                          "max_storage": 104857600,
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "memory_used": 4096,
+                          "max_memory": 8192,
+                          "percent_cpu_used": 45.2
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Sensors": {
+                    "description": "Health metrics for sensor resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:sensor:sensor001",
+                          "name": "Main Sensor",
+                          "state": "ACTIVE",
+                          "health_status": [
+                            "OK",
+                            "MONITORING"
+                          ],
+                          "storage_used": 15728640,
+                          "max_storage": 104857600,
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "memory_used": 1024,
+                          "max_memory": 2048,
+                          "percent_cpu_used": 15.2,
+                          "drop_rate": 0.01
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Multi-Status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageHealthMetricsV2"
+                },
+                "examples": {
+                  "Agent": {
+                    "description": "Health metrics for agent resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:agent:678",
+                          "offline": 5,
+                          "online": 25,
+                          "stale": 3,
+                          "total": 33
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Collectors": {
+                    "description": "Health metrics for collector resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:collector:abc123",
+                          "id": "collector-001",
+                          "name": "Main Collector",
+                          "state": "RUNNING",
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "event_sources_used": 15,
+                          "max_event_sources": 100,
+                          "memory_used": 2048,
+                          "max_memory": 4096,
+                          "percent_cpu_used": 25.5,
+                          "hostname": "example.rapid7.com",
+                          "ip_address": "192.0.2.0"
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Data Exporters": {
+                    "description": "Health metrics for data exporter resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:data_exporter:exporter001",
+                          "name": "Main Data Exporter",
+                          "state": "RUNNING",
+                          "last_active": "2025-09-18T10:30:00Z"
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Event Sources": {
+                    "description": "Health metrics for event source resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:event_source:source001",
+                          "name": "Main Event Source",
+                          "state": "ACTIVE",
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "events_per_minute": 100
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Honeypots": {
+                    "description": "Health metrics for honeypot resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:honeypot:honeypot001",
+                          "id": "honeypot-001",
+                          "name": "Main Honeypot",
+                          "state": "ACTIVE",
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "memory_used": 512,
+                          "max_memory": 1024,
+                          "percent_cpu_used": 10.5
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Orchestrator": {
+                    "description": "Health metrics for orchestrator resource",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:orchestrator:orch001",
+                          "name": "Main Orchestrator",
+                          "state": "RUNNING",
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "cpu_used": 35.8,
+                          "memory_used": 3072,
+                          "max_memory": 6144,
+                          "storage_used": 20971520,
+                          "max_storage": 52428800,
+                          "hostname": "example.rapid7.com",
+                          "ip_address": "192.0.2.0"
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Scan Engines": {
+                    "description": "Health metrics for scan engine resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:scan_engine:engine001",
+                          "name": "Main Scan Engine",
+                          "state": "RUNNING",
+                          "storage_used": 52428800,
+                          "max_storage": 104857600,
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "memory_used": 4096,
+                          "max_memory": 8192,
+                          "percent_cpu_used": 45.2
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  },
+                  "Sensors": {
+                    "description": "Health metrics for sensor resources",
+                    "value": {
+                      "data": [
+                        {
+                          "rrn": "rrn:rapid7:us:customer:12345:sensor:sensor001",
+                          "name": "Main Sensor",
+                          "state": "ACTIVE",
+                          "health_status": [
+                            "OK",
+                            "MONITORING"
+                          ],
+                          "storage_used": 15728640,
+                          "max_storage": 104857600,
+                          "last_active": "2025-09-18T10:30:00Z",
+                          "memory_used": 1024,
+                          "max_memory": 2048,
+                          "percent_cpu_used": 15.2,
+                          "drop_rate": 0.01
+                        }
+                      ],
+                      "metadata": {
+                        "index": 0,
+                        "size": 1,
+                        "total_pages": 1,
+                        "total_data": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetricsErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetricsErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient Permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetricsErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetricsErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetricsErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetricsErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetricsErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetricsErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetricsErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2017,6 +3001,11 @@
             "type": "string",
             "description": "An identifier that uniquely identifies the failed request.",
             "example": "An identifier that uniquely identifies the failed request."
+          },
+          "additional_details": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Additional structured error details forwarded from a downstream service, when available."
           }
         },
         "required": [
@@ -2286,6 +3275,20 @@
           "title"
         ]
       },
+      "AiSocClusterInvestigationResponseV2": {
+        "type": "object",
+        "properties": {
+          "investigation": {
+            "$ref": "#/components/schemas/InvestigationV2",
+            "description": "The created AISOC cluster investigation. Present when the investigation was created."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Association-conflict metadata identifying the alert cluster rrns that were NOT added and the investigations they are associated with. Present only on a partial (207) response."
+          }
+        }
+      },
       "BulkCloseInvestigationsRequestV2": {
         "type": "object",
         "description": "The criteria for what investigations to close.",
@@ -2367,6 +3370,59 @@
         "required": [
           "ids",
           "num_closed"
+        ]
+      },
+      "CreateAiSocClusterInvestigationRequestV2": {
+        "type": "object",
+        "description": "This is the field information for the new investigation.",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The name of the investigation.",
+            "example": "jsmith enabled account rroe",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "description": "The status of the investigation. Defaults to OPEN.",
+            "enum": [
+              "OPEN,CLOSED,INVESTIGATING"
+            ],
+            "example": "OPEN, CLOSED"
+          },
+          "priority": {
+            "type": "string",
+            "description": "The priority for the investigation. Defaults to UNSPECIFIED.",
+            "enum": [
+              "UNSPECIFIED,LOW,MEDIUM,HIGH,CRITICAL"
+            ],
+            "example": "UNSPECIFIED, LOW, MEDIUM, HIGH, CRITICAL"
+          },
+          "disposition": {
+            "type": "string",
+            "description": "The disposition for the investigation. Defaults to UNDECIDED.",
+            "enum": [
+              "UNDECIDED,BENIGN,MALICIOUS,NOT_APPLICABLE"
+            ],
+            "example": "UNDECIDED, BENIGN, MALICIOUS, NOT_APPLICABLE"
+          },
+          "assignee": {
+            "$ref": "#/components/schemas/AssigneeRequestV2",
+            "description": "The user assigned to this investigation."
+          },
+          "alert_cluster_rrns": {
+            "type": "array",
+            "description": "The rrns of the alert clusters to associate with this investigation.",
+            "example": [
+              "rrn:clusters:us1:73406292-d1b1-4ca0-a84f-1571fcf79c12:cluster:yQcUBPcW"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "title"
         ]
       },
       "DatedSearchRequest": {
@@ -2543,6 +3599,66 @@
           }
         }
       },
+      "GenericSecondPartyInfoDto": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "type": "string",
+            "description": "The product identifier for the Rapid7 product alert.",
+            "example": "EXAMPLE_PRODUCT"
+          },
+          "alert_id": {
+            "type": "string",
+            "description": "The unique identifier for this alert in the Rapid7 product.",
+            "example": "620ba5123b2aff3303ed65f3"
+          },
+          "type": {
+            "type": "string",
+            "description": "The type classification of the alert.",
+            "example": "Phishing"
+          },
+          "title": {
+            "type": "string",
+            "description": "The title of the alert.",
+            "example": "Suspicious login attempt detected."
+          },
+          "sub_type": {
+            "type": "string",
+            "description": "The sub-type classification of the alert.",
+            "example": "credential_theft"
+          },
+          "severity": {
+            "type": "string",
+            "description": "The severity level of the alert.",
+            "example": "High"
+          },
+          "description": {
+            "type": "string",
+            "description": "A description of the alert.",
+            "example": "A suspicious login attempt was detected from an unknown IP address."
+          },
+          "url": {
+            "type": "string",
+            "description": "A deep link URL to the alert in the originating product.",
+            "example": "https://example.com/alerts/620ba5123b2aff3303ed65f3"
+          },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Additional key-value attributes associated with the alert.",
+            "example": {
+              "source_ip": "192.0.2.1",
+              "destination_ip": "198.51.100.5"
+            }
+          }
+        },
+        "required": [
+          "alert_id",
+          "product"
+        ]
+      },
       "InsightAgentInfoDto": {
         "type": "object",
         "properties": {
@@ -2600,6 +3716,23 @@
             ],
             "items": {
               "$ref": "#/components/schemas/InsightAgentInfoDto"
+            }
+          },
+          "rapid7_product_info": {
+            "$ref": "#/components/schemas/GenericSecondPartyInfoDto",
+            "description": "A product-agnostic representation of the Rapid7 product alert. This object provides baseline alert information regardless of product type.",
+            "example": {
+              "product": "EXAMPLE_PRODUCT",
+              "alert_id": "620ba5123b2aff3303ed65f3",
+              "title": "Suspicious login attempt detected.",
+              "description": "A suspicious login attempt was detected from an unknown IP address.",
+              "type": "Phishing",
+              "sub_type": "credential_theft",
+              "severity": "High",
+              "url": "https://example.com/alerts/620ba5123b2aff3303ed65f3",
+              "attributes": {
+                "source_ip": "192.0.2.1"
+              }
             }
           }
         },
@@ -2734,6 +3867,569 @@
           "data",
           "metadata"
         ]
+      },
+      "HealthMetricsErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "A human-readable message describing the error that occurred.",
+            "example": "A human-readable message describing the error that occurred."
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "An identifier that uniquely identifies the failed request.",
+            "example": "6b6503c8-2da9-41c0-94cb-2f34069e00cd"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "AgentSummaryHealthV2": {
+        "type": "object",
+        "properties": {
+          "rrn": {
+            "type": "string",
+            "description": "Resource name for the health metric",
+            "example": "rrn:rapid7:us:customer:12345:agent:678"
+          },
+          "offline": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of offline agents",
+            "example": 5
+          },
+          "online": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of online agents",
+            "example": 25
+          },
+          "stale": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of stale agents",
+            "example": 3
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total number of agents",
+            "example": 33
+          }
+        }
+      },
+      "CollectorsHealthV2": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Collector identifier",
+            "example": "collector-001"
+          },
+          "rrn": {
+            "type": "string",
+            "description": "Resource name for the health metric",
+            "example": "rrn:rapid7:us:customer:12345:agent:678"
+          },
+          "name": {
+            "type": "string",
+            "description": "Collector name",
+            "example": "Main Collector"
+          },
+          "state": {
+            "type": "string",
+            "description": "Current collector state",
+            "example": "RUNNING"
+          },
+          "last_active": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last time the collector was active",
+            "example": "2025-09-18T10:30:00Z"
+          },
+          "event_sources_used": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of event sources currently in use",
+            "example": 15
+          },
+          "max_event_sources": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Maximum number of event sources allowed",
+            "example": 100
+          },
+          "issue": {
+            "$ref": "#/components/schemas/Issue",
+            "description": "Current issue with the collector, if any"
+          },
+          "memory_used": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Memory currently used by the collector in MB",
+            "example": 2048
+          },
+          "max_memory": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Maximum memory available to the collector in MB",
+            "example": 4096
+          },
+          "percent_cpu_used": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "CPU utilization percentage",
+            "example": 25.5
+          },
+          "hostname": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hostname of the collector, if known",
+            "example": "example.rapid7.com"
+          },
+          "ip_address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "IP address of the collector, if known",
+            "example": "192.0.2.0"
+          }
+        }
+      },
+      "DataExportersHealthV2": {
+        "type": "object",
+        "properties": {
+          "rrn": {
+            "type": "string",
+            "description": "Resource name for the health metric",
+            "example": "rrn:rapid7:us:customer:12345:agent:678"
+          },
+          "name": {
+            "type": "string",
+            "description": "Data exporter name",
+            "example": "Main Data Exporter"
+          },
+          "state": {
+            "type": "string",
+            "description": "Current data exporter state",
+            "example": "RUNNING"
+          },
+          "issue": {
+            "$ref": "#/components/schemas/Issue",
+            "description": "Current issue with the data exporter, if any"
+          },
+          "last_active": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Last time the data exporter was active",
+            "example": "2025-09-18T10:30:00Z"
+          }
+        }
+      },
+      "EventSourcesHealthV2": {
+        "type": "object",
+        "properties": {
+          "rrn": {
+            "type": "string",
+            "description": "Resource name for the health metric",
+            "example": "rrn:rapid7:us:customer:12345:agent:678"
+          },
+          "name": {
+            "type": "string",
+            "description": "Event source name",
+            "example": "Main Event Source"
+          },
+          "state": {
+            "type": "string",
+            "description": "Current event source state",
+            "example": "ACTIVE"
+          },
+          "last_active": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last time the event source was active",
+            "example": "2025-09-18T10:30:00Z"
+          },
+          "issue": {
+            "$ref": "#/components/schemas/Issue",
+            "description": "Current issue with the event source, if any"
+          },
+          "events_per_minute": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Events per minute (EPM) for the event source. Present only when withEpm=true and EPM is available.",
+            "example": 100
+          }
+        }
+      },
+      "HealthMetricsV2": {
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/AgentSummaryHealthV2"
+          },
+          {
+            "$ref": "#/components/schemas/CollectorsHealthV2"
+          },
+          {
+            "$ref": "#/components/schemas/DataExportersHealthV2"
+          },
+          {
+            "$ref": "#/components/schemas/EventSourcesHealthV2"
+          },
+          {
+            "$ref": "#/components/schemas/HoneypotsHealthV2"
+          },
+          {
+            "$ref": "#/components/schemas/OrchestratorHealthV2"
+          },
+          {
+            "$ref": "#/components/schemas/ScanEnginesHealthV2"
+          },
+          {
+            "$ref": "#/components/schemas/SensorsHealthV2"
+          }
+        ],
+        "description": "Health metrics for various resource types",
+        "properties": {
+          "rrn": {
+            "type": "string",
+            "description": "Resource name for the health metric",
+            "example": "rrn:rapid7:us:customer:12345:agent:678"
+          }
+        }
+      },
+      "HoneypotsHealthV2": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Honeypot identifier",
+            "example": "honeypot-001"
+          },
+          "rrn": {
+            "type": "string",
+            "description": "Resource name for the health metric",
+            "example": "rrn:rapid7:us:customer:12345:agent:678"
+          },
+          "name": {
+            "type": "string",
+            "description": "Honeypot name",
+            "example": "Main Honeypot"
+          },
+          "state": {
+            "type": "string",
+            "description": "Current honeypot state",
+            "example": "ACTIVE"
+          },
+          "last_active": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last time the honeypot was active",
+            "example": "2025-09-18T10:30:00Z"
+          },
+          "issue": {
+            "$ref": "#/components/schemas/Issue",
+            "description": "Current issue with the honeypot, if any"
+          },
+          "memory_used": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Memory currently used by the honeypot in MB",
+            "example": 512
+          },
+          "max_memory": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Maximum memory available to the honeypot in MB",
+            "example": 1024
+          },
+          "percent_cpu_used": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "CPU utilization percentage",
+            "example": 10.5
+          }
+        }
+      },
+      "Issue": {
+        "type": "null",
+        "properties": {
+          "severity": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "event_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "OrchestratorHealthV2": {
+        "type": "object",
+        "properties": {
+          "rrn": {
+            "type": "string",
+            "description": "Resource name for the health metric",
+            "example": "rrn:rapid7:us:customer:12345:agent:678"
+          },
+          "name": {
+            "type": "string",
+            "description": "Orchestrator name",
+            "example": "Main Orchestrator"
+          },
+          "state": {
+            "type": "string",
+            "description": "Current orchestrator state",
+            "example": "RUNNING"
+          },
+          "last_active": {
+            "type": "string",
+            "description": "Last time the orchestrator was active",
+            "example": "2025-09-18T10:30:00Z"
+          },
+          "cpu_used": {
+            "type": "number",
+            "format": "double",
+            "description": "CPU utilization percentage",
+            "example": 35.8
+          },
+          "memory_used": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Memory currently used by the orchestrator in MB",
+            "example": 3072
+          },
+          "max_memory": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Maximum memory available to the orchestrator in MB",
+            "example": 6144
+          },
+          "storage_used": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Storage currently used by the orchestrator in bytes",
+            "example": 20971520
+          },
+          "max_storage": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Maximum storage available to the orchestrator in bytes",
+            "example": 52428800
+          },
+          "hostname": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hostname of the orchestrator, if known",
+            "example": "example.rapid7.com"
+          },
+          "ip_address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "IP address of the orchestrator, if known",
+            "example": "192.0.2.0"
+          }
+        }
+      },
+      "PageHealthMetricsV2": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "The list of data that matches the pagination parameters. If no results match this will be an empty list.",
+            "items": {
+              "$ref": "#/components/schemas/HealthMetricsV2"
+            }
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/PageMetadata",
+            "description": "The pagination parameters used to generate this page result. Depending on the API, additional parameters may be dynamically present."
+          }
+        },
+        "required": [
+          "data",
+          "metadata"
+        ]
+      },
+      "ScanEnginesHealthV2": {
+        "type": "object",
+        "properties": {
+          "rrn": {
+            "type": "string",
+            "description": "Resource name for the health metric",
+            "example": "rrn:rapid7:us:customer:12345:agent:678"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Scan engine name",
+            "example": "Main Scan Engine"
+          },
+          "state": {
+            "type": "string",
+            "description": "Current scan engine state",
+            "example": "RUNNING"
+          },
+          "storage_used": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Storage currently used by the scan engine in bytes",
+            "example": 52428800
+          },
+          "max_storage": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Maximum storage available to the scan engine in bytes",
+            "example": 104857600
+          },
+          "last_active": {
+            "type": "string",
+            "description": "Last time the scan engine was active",
+            "example": "2025-09-18T10:30:00Z"
+          },
+          "memory_used": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Memory currently used by the scan engine in MB",
+            "example": 4096
+          },
+          "max_memory": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Maximum memory available to the scan engine in MB",
+            "example": 8192
+          },
+          "percent_cpu_used": {
+            "type": "number",
+            "format": "float",
+            "description": "CPU utilization percentage",
+            "example": 45.2
+          }
+        }
+      },
+      "SensorsHealthV2": {
+        "type": "object",
+        "properties": {
+          "rrn": {
+            "type": "string",
+            "description": "Resource name for the health metric",
+            "example": "rrn:rapid7:us:customer:12345:agent:678"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Sensor name",
+            "example": "Main Sensor"
+          },
+          "state": {
+            "type": "string",
+            "description": "Current sensor state",
+            "example": "ACTIVE"
+          },
+          "health_status": {
+            "type": "array",
+            "description": "List of health status indicators",
+            "example": [
+              "OK",
+              "MONITORING"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "storage_used": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Storage currently used by the sensor in bytes",
+            "example": 15728640
+          },
+          "max_storage": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Maximum storage available to the sensor in bytes",
+            "example": 104857600
+          },
+          "last_active": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last time the sensor was active",
+            "example": "2025-09-18T10:30:00Z"
+          },
+          "memory_used": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Memory currently used by the sensor in MB",
+            "example": 1024
+          },
+          "max_memory": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Maximum memory available to the sensor in MB",
+            "example": 2048
+          },
+          "percent_cpu_used": {
+            "type": "number",
+            "format": "float",
+            "description": "CPU utilization percentage",
+            "example": 15.2
+          },
+          "drop_rate": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "Data drop rate as a percentage",
+            "example": 0.01
+          },
+          "issue": {
+            "$ref": "#/components/schemas/Issue",
+            "description": "Current issue with the sensor, if any"
+          }
+        }
       }
     }
   }
