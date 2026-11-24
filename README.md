@@ -96,6 +96,10 @@ Choose your AI tool below. Each guide walks through installing the MCP server, a
 
 1. Try: `/rapid7-bulk-export-analysis-expert Load the latest vulnerability data from Rapid7`
 
+#### Run in a container instead (macOS)
+
+To run the published image locally instead of the connector, see [docs/claude-desktop-docker.md](./docs/claude-desktop-docker.md) (Docker, Colima, OrbStack) or [docs/claude-desktop-apple-container.md](./docs/claude-desktop-apple-container.md) (Apple Container).
+
 </details>
 
 <details>

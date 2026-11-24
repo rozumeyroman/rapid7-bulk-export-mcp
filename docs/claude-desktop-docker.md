@@ -10,6 +10,9 @@ ghcr.io/rozumeyroman/rapid7-bulk-export-mcp:latest
 Claude Desktop starts it as a child process over **stdio**. No port is opened,
 so the HTTP transport's OIDC requirement does not apply.
 
+Using Apple's own runtime instead of Docker? See
+[claude-desktop-apple-container.md](./claude-desktop-apple-container.md).
+
 ## 1. Install a container runtime
 
 Any of these works:
