@@ -98,7 +98,7 @@ More powerful filtering than `listInvestigations`, exposed as `search_investigat
 |---|---|
 | `status` | `OPEN`, `INVESTIGATING`, `WAITING`, `CLOSED` |
 | `priority` | `UNSPECIFIED`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` |
-| `disposition` | `UNDECIDED` (default on creation), `BENIGN`, `MALICIOUS`, `NOT_APPLICABLE` |
+| `disposition` | Spec: `UNDECIDED` (default on creation), `BENIGN`, `MALICIOUS`, `NOT_APPLICABLE`. **Live data (2026-11-24)** also has `SECURITY_TEST`, and the undecided state shows as `UNKNOWN`, not `UNDECIDED`. `close_investigation` accepts `BENIGN`, `MALICIOUS`, `NOT_APPLICABLE`, `SECURITY_TEST` |
 | `source` | `ALERT`, `HUNT`, `USER`, `AUTOMATION` (live API; the spec's `MANUAL` is stale and rejected with `400`) |
 
 ## Why `bulk_close` is intentionally unused

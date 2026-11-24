@@ -390,6 +390,15 @@ class TestCloseInvestigation:
         with pytest.raises(ValueError, match="Invalid disposition"):
             close_investigation(CONFIG, "inv-1", "NOT_A_REAL_DISPOSITION")
 
+    def test_security_test_is_a_valid_close_disposition(self):
+        # Missing from the spec, but present on live investigations (2026-11-24).
+        assert "SECURITY_TEST" in VALID_DISPOSITIONS
+
+    @pytest.mark.parametrize("not_a_close_reason", ["UNKNOWN", "UNDECIDED"])
+    def test_undecided_states_are_not_close_dispositions(self, not_a_close_reason):
+        with pytest.raises(ValueError, match="Invalid disposition"):
+            close_investigation(CONFIG, "inv-1", not_a_close_reason)
+
     @responses.activate
     def test_targets_the_specific_investigation_id_not_bulk_close(self):
         responses.add(

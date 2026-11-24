@@ -20,7 +20,7 @@ INVESTIGATION = {
     "title": "Suspicious Authentication",
     "priority": "HIGH",
     "status": "OPEN",
-    "disposition": "UNDECIDED",
+    "disposition": "UNKNOWN",
     "assignee": {"name": "Ana", "email": "ana@example.com"},
     "created_time": "2026-11-01T00:00:00Z",
 }
@@ -257,3 +257,37 @@ class TestGetIdrHealthMetrics:
 
         assert out.startswith("✗ Unknown resource type(s): sensors")
         assert fake.calls == []
+
+
+class TestCloseInvestigationDisposition:
+    OPEN_INVESTIGATION = {**INVESTIGATION, "status": "OPEN", "disposition": "UNKNOWN"}
+
+    def test_security_test_lowercase_is_normalized_in_preview(self, monkeypatch):
+        monkeypatch.setattr(mcp_server, "idr_get_investigation", _Recorder(self.OPEN_INVESTIGATION))
+        closer = _Recorder({})
+        monkeypatch.setattr(mcp_server, "idr_close_investigation", closer)
+
+        out = mcp_server.close_investigation("inv-1", " security_test ")
+
+        assert "disposition 'SECURITY_TEST'" in out
+        assert 'disposition="SECURITY_TEST", confirm=True' in out
+        # Preview only — nothing is closed without confirm=True.
+        assert closer.args is None
+
+    def test_confirmed_close_sends_normalized_disposition(self, monkeypatch):
+        monkeypatch.setattr(mcp_server, "idr_get_investigation", _Recorder(self.OPEN_INVESTIGATION))
+        closer = _Recorder({"status": "CLOSED", "disposition": "SECURITY_TEST"})
+        monkeypatch.setattr(mcp_server, "idr_close_investigation", closer)
+
+        mcp_server.close_investigation("inv-1", "Security_Test", confirm=True)
+
+        assert closer.args[2] == "SECURITY_TEST"
+
+    def test_unknown_is_rejected(self, monkeypatch):
+        getter = _Recorder(self.OPEN_INVESTIGATION)
+        monkeypatch.setattr(mcp_server, "idr_get_investigation", getter)
+
+        out = mcp_server.close_investigation("inv-1", "UNKNOWN")
+
+        assert out.startswith("✗ Invalid disposition")
+        assert getter.args is None

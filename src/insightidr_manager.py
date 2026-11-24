@@ -15,7 +15,11 @@ from typing import Any, Dict, List, Optional
 from .insightidr_client import INVESTIGATIONS_ACCEPT_VERSION, send_idr_request
 
 VALID_STATUSES = ("OPEN", "INVESTIGATING", "WAITING", "CLOSED")
-VALID_DISPOSITIONS = ("BENIGN", "MALICIOUS", "NOT_APPLICABLE")
+# Close dispositions. The spec lists only BENIGN/MALICIOUS/NOT_APPLICABLE, but
+# live investigations (2026-11-24) also carry SECURITY_TEST — a close reason the
+# InsightIDR UI offers. UNKNOWN also appears live, as the not-yet-decided state
+# (the spec calls it UNDECIDED); it is not a close reason, so it is not here.
+VALID_DISPOSITIONS = ("BENIGN", "MALICIOUS", "NOT_APPLICABLE", "SECURITY_TEST")
 VALID_COMMENT_VISIBILITIES = ("INTERNAL", "PUBLIC")
 VALID_PRIORITIES = ("UNSPECIFIED", "LOW", "MEDIUM", "HIGH", "CRITICAL")
 # Per the live API's 400 message (2026-11-24); the spec's InvestigationV2

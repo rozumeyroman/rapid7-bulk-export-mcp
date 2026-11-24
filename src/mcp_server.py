@@ -2025,8 +2025,10 @@ def close_investigation(investigation_id: str, disposition: str, confirm: bool =
 
     Args:
         investigation_id: The investigation ID or RRN to close (from get_investigations).
-        disposition: One of "BENIGN", "MALICIOUS", "NOT_APPLICABLE" — required
-                     whenever an investigation is closed.
+        disposition: One of "BENIGN", "MALICIOUS", "NOT_APPLICABLE",
+                     "SECURITY_TEST" (authorized testing, e.g. a pentest or
+                     red-team exercise) — required whenever an investigation
+                     is closed. Case-insensitive.
         confirm: Must be True to actually perform the close. Defaults to
                  False, which only previews the investigation and its
                  current state without changing anything.
@@ -2035,6 +2037,7 @@ def close_investigation(investigation_id: str, disposition: str, confirm: bool =
         A preview of the investigation to be closed (if confirm=False), or
         confirmation that it was closed (if confirm=True).
     """
+    disposition = disposition.strip().upper()
     if disposition not in VALID_DISPOSITIONS:
         return f"✗ Invalid disposition: '{disposition}'. Valid values are: {', '.join(VALID_DISPOSITIONS)}"
 

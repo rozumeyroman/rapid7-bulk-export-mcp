@@ -78,7 +78,10 @@ If a user asks for something that sounds like it needs a new capability (reassig
 |---|---|
 | `BENIGN` | Confirmed non-malicious — expected/legitimate activity |
 | `MALICIOUS` | Confirmed a real security incident |
-| `NOT_APPLICABLE` | Doesn't warrant a benign/malicious judgment (e.g. test activity, duplicate, misconfigured rule) |
+| `NOT_APPLICABLE` | Doesn't warrant a benign/malicious judgment (e.g. duplicate, misconfigured rule) |
+| `SECURITY_TEST` | Activity from an authorized test — pentest, red-team or breach-and-attack simulation. Prefer this over `NOT_APPLICABLE` for known test activity |
+
+Open investigations show disposition `UNKNOWN` (not yet decided) — that is a state, not a value you can close with. The spec still calls it `UNDECIDED` and doesn't list `SECURITY_TEST` at all; both were confirmed from live data.
 
 ### Priority values observed
 `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` (highest urgency first when triaging)
@@ -371,7 +374,7 @@ If `get_investigations`/`get_investigation_details`/`get_alert_evidence`/`get_in
 
 If `close_investigation` returns an error:
 1. Show the raw error to the user — do not retry automatically, especially not with `confirm=True`
-2. Common causes: invalid `disposition` value (must be exact: `BENIGN`, `MALICIOUS`, `NOT_APPLICABLE`), invalid/stale `investigation_id`, insufficient API key permissions
+2. Common causes: invalid `disposition` value (must be one of `BENIGN`, `MALICIOUS`, `NOT_APPLICABLE`, `SECURITY_TEST`), invalid/stale `investigation_id`, insufficient API key permissions
 3. Re-fetch with `get_investigation_details` to check current state before retrying
 
 If `assign_investigation` returns an error (400/403/404):

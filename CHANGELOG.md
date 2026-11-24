@@ -21,6 +21,8 @@
 
 ### Changed
 
+- `close_investigation` accepts the `SECURITY_TEST` disposition (present on live investigations
+  but missing from the spec), and dispositions are now case-insensitive.
 - Fixed the documented investigation `source` values: the live API accepts `ALERT`, `HUNT`,
   `USER` and `AUTOMATION`; `MANUAL` (from the spec) is rejected.
 - Refreshed the bundled InsightIDR v1 and v2 OpenAPI specs. Upstream added AISOC-cluster
